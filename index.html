@@ -45,6 +45,8 @@
             text-align: center;
         }
         .joker {
+            cursor: pointer;
+            position: relative;
             width: var(--block-size);
             height: var(--block-size);
             line-height: var(--block-size);
@@ -101,6 +103,7 @@
             position: absolute;
             top: 2px;
         }
+        .joker.used:before,
         .score-block.selected:before {
             z-index: 99;
             content: "X";
@@ -109,6 +112,10 @@
             position: absolute;
             font-size: 29px;
             text-align: center;
+        }
+        .joker.used:before {
+            color: #000;
+            left:0;
         }
         .star {
             opacity: .8;
@@ -125,6 +132,7 @@
             margin-top: 5px;
         }
         span.column-score {
+            cursor: pointer;
             margin-bottom: 2px;
         }
         span.column-score.active {
@@ -403,7 +411,7 @@
             <span class="joker">
                 !
             </span>
-            <span class="joker">
+            <span class="joker used">
                 !
             </span>
             <span class="joker">

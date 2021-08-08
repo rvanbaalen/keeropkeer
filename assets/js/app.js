@@ -21,7 +21,7 @@ Array.prototype.forEach.call(columnScores, (columnScore) => {
     }, false);
 });
 
-let jokers = document.getElementsByClassName('score-block');
+let jokers = document.getElementsByClassName('joker');
 Array.prototype.forEach.call(jokers, (joker) => {
     joker.addEventListener('click', (event) => {
         joker.classList.toggle('used');
