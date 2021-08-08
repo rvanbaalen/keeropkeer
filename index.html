@@ -97,6 +97,15 @@
             position: absolute;
             top: 2px;
         }
+        .score-block.selected:before {
+            z-index: 99;
+            content: "X";
+            width: var(--block-size);
+            height: var(--block-size);
+            position: absolute;
+            font-size: 29px;
+            text-align: center;
+        }
         .star {
             opacity: .8;
             color: white;
@@ -113,6 +122,15 @@
         }
         span.column-score {
             margin-bottom: 2px;
+        }
+        span.column-score.active {
+            color: white;
+            background: mediumseagreen;
+        }
+        span.column-score.taken {
+            color: gray;
+            background: lightgray;
+            cursor: no-drop;
         }
 
         .green {
@@ -148,7 +166,7 @@
                 <span class="score-block yellow">&nbsp;</span>
 
                 <div class="column-score">
-                    <span class="rounded-block column-score">5</span>
+                    <span class="rounded-block column-score active">5</span>
                     <span class="rounded-block column-score">3</span>
                 </div>
             </div>
@@ -164,7 +182,7 @@
                 <span class="score-block yellow">&nbsp;</span>
 
                 <div class="column-score">
-                    <span class="rounded-block column-score">3</span>
+                    <span class="rounded-block column-score taken">3</span>
                     <span class="rounded-block column-score">2</span>
                 </div>
             </div>
@@ -189,7 +207,7 @@
 
                 <span class="score-block yellow">&nbsp;</span>
                 <span class="score-block green">&nbsp;</span>
-                <span class="score-block green">&nbsp;</span>
+                <span class="score-block green selected">&nbsp;</span>
                 <span class="score-block green">&nbsp;</span>
                 <span class="score-block orange">&nbsp;</span>
                 <span class="score-block red"><span class="star">*</span></span>
