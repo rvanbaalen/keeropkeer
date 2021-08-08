@@ -12,6 +12,7 @@
             --circle-size: 26px;
         }
         body {
+            user-select: none;
             background: #000;
             font-family: Arial, sans-serif;
             font-weight: bolder;
@@ -48,13 +49,16 @@
             height: var(--block-size);
             line-height: var(--block-size);
             font-size: 20px;
-            background: red;
+            background: mediumseagreen;
             display: block;
             float: left;
             margin: 5px;
             border-radius: 50%;
             color: #fff;
             text-align: center;
+        }
+        .joker.used {
+            background: red;
         }
         .letter {
             width: var(--block-size);

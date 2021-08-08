@@ -20,3 +20,10 @@ Array.prototype.forEach.call(columnScores, (columnScore) => {
         }
     }, false);
 });
+
+let jokers = document.getElementsByClassName('score-block');
+Array.prototype.forEach.call(jokers, (joker) => {
+    joker.addEventListener('click', (event) => {
+        joker.classList.toggle('used');
+    }, false);
+});
