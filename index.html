@@ -79,6 +79,7 @@
         }
         .column {
             float: left;
+            position: relative;
         }
         .column.highlight .score-block {
             border: 2px #fff solid;
@@ -188,6 +189,32 @@
             position: absolute;
             border-radius: 50%;
             left: 0;
+        }
+        .totals {
+            background: #fff;
+            height: 30px;
+            border-radius: 4px;
+            position: absolute;
+            right: -30px;
+            margin-top: 2px;
+            line-height: 30px;
+            width: 56px;
+            padding-left: 7px;
+        }
+        .totals.bonus label {
+            text-transform: uppercase;
+        }
+        .totals label {
+            text-align: right;
+            position: absolute;
+            left: -54px;
+            color: #fff;
+            width: 50px;
+            font-size: 12px;
+            line-height: var(--block-size);
+        }
+        .totals.columns {
+            margin-top: 34px;
         }
     </style>
 </head>
@@ -444,7 +471,8 @@
                 <span class="score-block final-score blue"><span>5</span></span>
                 <span class="score-block final-score red"><span>5</span></span>
                 <span class="score-block final-score orange"><span>5</span></span>
-                <span class="score-block final-score white">&nbsp;</span>
+                <div class="totals bonus"><label>Bonus</label><span class="label">=</span></div>
+                <div class="totals columns"><label>A-O</label><span class="label">+</span></div>
             </div>
             <div class="column">
                 <span class="score-block final-score green"><span>3</span></span>
@@ -452,7 +480,6 @@
                 <span class="score-block final-score blue"><span>3</span></span>
                 <span class="score-block final-score red"><span>3</span></span>
                 <span class="score-block final-score orange"><span>3</span></span>
-                <span class="score-block final-score white">&nbsp;</span>
             </div>
         </div>
         <div class="jokers rounded">
