@@ -10,6 +10,11 @@
         :root {
             --block-size: 30px;
             --circle-size: 26px;
+            --orange: orange;
+            --yellow: #eecf35;
+            --red: #c7153f;
+            --blue: cornflowerblue;
+            --green: mediumseagreen;
         }
         body {
             user-select: none;
@@ -144,21 +149,51 @@
             background: lightgray;
             cursor: no-drop;
         }
+        .column.spacer {
+            width: 60px;
+        }
 
         .green {
-            background: mediumseagreen;
+            background: var(--green);
         }
         .blue {
-            background: cornflowerblue;
+            background: var(--blue);
         }
         .red {
-            background: #c7153f;
+            background: var(--red);
         }
         .yellow {
-            background: #eecf35;
+            background: var(--yellow);
         }
         .orange {
-            background: orange;
+            background: var(--orange);
+        }
+        .white {
+            background: #fff;
+        }
+        .final-score {
+            color: #fff;
+            opacity: 1;
+            text-align: center;
+            width: var(--block-size);
+            font-size: 24px;
+            position: absolute;
+            line-height: var(--block-size);
+        }
+        .orange .final-score {
+            color: var(--orange);
+        }
+        .yellow .final-score {
+            color: var(--yellow);
+        }
+        .red .final-score {
+            color: var(--red);
+        }
+        .blue .final-score {
+            color: var(--blue);
+        }
+        .green .final-score {
+            color: var(--green);
         }
     </style>
 </head>
@@ -178,7 +213,7 @@
                 <span class="score-block yellow">&nbsp;</span>
 
                 <div class="column-score">
-                    <span class="rounded-block column-score active">5</span>
+                    <span class="rounded-block column-score">5</span>
                     <span class="rounded-block column-score">3</span>
                 </div>
             </div>
@@ -194,7 +229,7 @@
                 <span class="score-block yellow">&nbsp;</span>
 
                 <div class="column-score">
-                    <span class="rounded-block column-score taken">3</span>
+                    <span class="rounded-block column-score">3</span>
                     <span class="rounded-block column-score">2</span>
                 </div>
             </div>
@@ -405,6 +440,25 @@
                     <span class="rounded-block column-score">5</span>
                     <span class="rounded-block column-score">3</span>
                 </div>
+            </div>
+            <div class="column spacer">
+                &nbsp;
+            </div>
+            <div class="column">
+                <span class="score-block green"><span class="final-score">5</span></span>
+                <span class="score-block yellow"><span class="final-score">5</span></span>
+                <span class="score-block blue"><span class="final-score">5</span></span>
+                <span class="score-block red"><span class="final-score">5</span></span>
+                <span class="score-block orange"><span class="final-score">5</span></span>
+                <span class="score-block white">&nbsp;</span>
+            </div>
+            <div class="column">
+                <span class="score-block green"><span class="final-score">3</span></span>
+                <span class="score-block yellow"><span class="final-score">3</span></span>
+                <span class="score-block blue"><span class="final-score">3</span></span>
+                <span class="score-block red"><span class="final-score">3</span></span>
+                <span class="score-block orange"><span class="final-score">3</span></span>
+                <span class="score-block white">&nbsp;</span>
             </div>
         </div>
         <div class="jokers rounded">
