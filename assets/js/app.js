@@ -1,10 +1,14 @@
 let scoreBlocks = document.querySelectorAll('.score-block:not(.final-score)');
 Array.prototype.forEach.call(scoreBlocks, (scoreBlock) => {
     scoreBlock.addEventListener('click', () => {
-        scoreBlock.classList.toggle('selected');
+        toggleSelected(scoreBlock);
         updateScores();
     }, false);
 });
+
+function toggleSelected(block) {
+    block.classList.toggle('selected');
+}
 
 let finalScores = document.querySelectorAll('.final-score');
 Array.prototype.forEach.call(finalScores, (finalScore) => {
