@@ -2,7 +2,6 @@ const JOKER_VALUE = 1;
 const STAR_VALUE = 2;
 
 window.onbeforeunload = unload();
-window.onunload = unload();
 
 function unload() {
  return confirm('Weet je zeker dat je weg wil gaan?');
