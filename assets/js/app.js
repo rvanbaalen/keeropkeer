@@ -6,6 +6,7 @@ Array.prototype.forEach.call(scoreBlocks, (scoreBlock) => {
     scoreBlock.addEventListener('click', () => {
         toggleSelected(scoreBlock);
         updateScores();
+        setStarTotal();
     }, false);
 });
 
@@ -17,6 +18,7 @@ let finalScores = document.querySelectorAll('.final-score');
 Array.prototype.forEach.call(finalScores, (finalScore) => {
     finalScore.addEventListener('click', () => {
         finalScore.classList.toggle('final-selected');
+        setBonusTotal();
     }, false);
 });
 
@@ -31,12 +33,6 @@ function updateScores() {
     let bluesSelected = document.querySelectorAll('.blue.selected');
     let oranges = document.getElementsByClassName('orange');
     let selectedOranges = document.querySelectorAll('.orange.selected');
-
-    console.log('Greens: ', greens.length - 2, greensSelected.length);
-    console.log('Yellows: ', yellows.length - 2, yellowsSelected.length);
-    console.log('Reds: ', reds.length - 2, redsSelected.length);
-    console.log('Blues: ', blues.length - 2, bluesSelected.length);
-    console.log('Oranges: ', oranges.length - 2, selectedOranges.length);
 }
 
 let columnScores = document.getElementsByClassName('column-score');
@@ -52,6 +48,8 @@ Array.prototype.forEach.call(columnScores, (columnScore) => {
             columnScore.classList.remove('taken');
             columnScore.classList.remove('active');
         }
+
+        setColumnTotal();
     }, false);
 
     updateScores();
@@ -65,7 +63,25 @@ Array.prototype.forEach.call(jokers, (joker) => {
     }, false);
 });
 
-function setJokerTotal() {
+function getTotalScore() {
+    return getBonusTotal() + getColumnTotal() + getJokerTotal() - getStarTotal();
+}
+function setTotalScore() {
+    $('totalScore').innerText = getTotalScore();
+}
+function getBonusTotal() {
+    let bonuses = document.querySelectorAll('.final-selected span');
+    let bonusTotal = 0;
+    Array.prototype.forEach.call(bonuses, (bonus) => {
+        bonusTotal += parseInt(bonus.innerText);
+    });
+
+    return bonusTotal;
+}
+function setBonusTotal() {
+    $('bonusTotal').innerText = getBonusTotal();
+}
+function getJokerTotal() {
     let jokers = document.getElementsByClassName('joker');
     let totalJokers = jokers.length;
     let usedJokers = 0;
@@ -75,29 +91,49 @@ function setJokerTotal() {
         }
     });
 
-    $('jokerTotal').innerText = (totalJokers - usedJokers) * JOKER_VALUE;
+    return (totalJokers - usedJokers) * JOKER_VALUE;
+}
+function setJokerTotal() {
+    $('jokerTotal').innerText = getJokerTotal();
 }
 
-function setColumnTotal() {
-    let jokers = document.querySelectorAll('.column-score.active');
-    let totalJokers = jokers.length;
-    let usedJokers = 0;
-    Array.prototype.forEach.call(jokers, (joker) => {
-        if (joker.classList.contains('used')) {
-            usedJokers++;
-        }
+function getColumnTotal() {
+    let activeColumns = document.querySelectorAll('span.column-score.active');
+    let totalValue = 0;
+    Array.prototype.forEach.call(activeColumns, (activeColumn) => {
+        let value = parseInt(activeColumn.innerText);
+        console.log(value);
+        totalValue += value;
     });
 
-    $('jokerTotal').innerText = (totalJokers - usedJokers) * JOKER_VALUE;
+    return totalValue;
+}
+function setColumnTotal() {
+    $('columnsTotal').innerText = getColumnTotal();
+}
+
+function getStarTotal() {
+    let activeStars = document.querySelectorAll('span.selected span.star').length;
+    let totalStars = document.querySelectorAll('span.star').length;
+
+    return (totalStars - activeStars) * STAR_VALUE;
+}
+function setStarTotal() {
+    $('starsTotal').innerText = getStarTotal();
 }
 
 function $(id) {
     return document.getElementById(id);
 }
 function init() {
-    $('bonusTotal').innerText = '0';
-    $('columnsTotal').innerText = '0';
+    setBonusTotal()
     setJokerTotal();
+    setColumnTotal();
+    setStarTotal();
 }
+
+$('totals').addEventListener('click', () => {
+    setTotalScore();
+}, false);
 
 init();
