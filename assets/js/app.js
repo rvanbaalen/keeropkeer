@@ -1,6 +1,10 @@
 const JOKER_VALUE = 1;
 const STAR_VALUE = 2;
 
+window.onbeforeunload = function () {
+ return confirm('Weet je zeker dat je weg wil gaan?');
+};
+
 let scoreBlocks = document.querySelectorAll('.score-block:not(.final-score)');
 Array.prototype.forEach.call(scoreBlocks, (scoreBlock) => {
     scoreBlock.addEventListener('click', () => {
