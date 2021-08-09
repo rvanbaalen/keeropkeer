@@ -23,16 +23,43 @@ Array.prototype.forEach.call(finalScores, (finalScore) => {
 });
 
 function updateScores() {
-    let greens = document.getElementsByClassName('green');
-    let greensSelected = document.querySelectorAll('.green.selected');
-    let yellows = document.getElementsByClassName('yellow');
-    let yellowsSelected = document.querySelectorAll('.yellow.selected');
-    let reds = document.getElementsByClassName('red');
-    let redsSelected = document.querySelectorAll('.red.selected');
-    let blues = document.getElementsByClassName('blue');
-    let bluesSelected = document.querySelectorAll('.blue.selected');
-    let oranges = document.getElementsByClassName('orange');
-    let selectedOranges = document.querySelectorAll('.orange.selected');
+    const colorMap = {
+        'green': 'groen',
+        'blue': 'blauw',
+        'yellow': 'geel',
+        'red': 'rood',
+        'orange': 'oranje'
+    };
+    let claimBonus = function (color) {
+        if (confirm('Ben je de eerste met kleur ' + colorMap[color] + '?')) {
+            document.querySelectorAll('.final-score.green')[0].classList.toggle('final-selected');
+            document.querySelectorAll('.final-score.second.green')[0].classList.remove('final-selected');
+        } else {
+            document.querySelectorAll('.final-score.second.green')[0].classList.toggle('final-selected');
+            document.querySelectorAll('.final-score.green')[0].classList.remove('final-selected');
+        }
+
+        setBonusTotal();
+    };
+    let unclaimBonus = function (color) {
+        let element = document.querySelectorAll('.final-score.final-selected.green')[0];
+        if (element) {
+            element.classList.remove('final-selected');
+        }
+    }
+
+    let colors = ['green', 'yellow', 'red', 'blue', 'orange'];
+    colors.forEach(color => {
+        let all = document.getElementsByClassName(color).length - 2;
+        let allSelected = document.querySelectorAll('.' + color + '.selected').length;
+        console.log('check', color, all, allSelected);
+
+        if (all === allSelected) {
+            claimBonus(color);
+        } else {
+            // unclaimBonus(color);
+        }
+    });
 }
 
 let columnScores = document.getElementsByClassName('column-score');
@@ -51,8 +78,6 @@ Array.prototype.forEach.call(columnScores, (columnScore) => {
 
         setColumnTotal();
     }, false);
-
-    updateScores();
 });
 
 let jokers = document.getElementsByClassName('joker');
