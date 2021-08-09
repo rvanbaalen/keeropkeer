@@ -29,6 +29,7 @@ Array.prototype.forEach.call(finalScores, (finalScore) => {
     }, false);
 });
 
+let claimed = [];
 function updateScores() {
     const colorMap = {
         'green': 'groen',
@@ -38,6 +39,7 @@ function updateScores() {
         'orange': 'oranje'
     };
     let claimBonus = function (color) {
+if(claimed.indexOf(color) === -1) {
         if (confirm('Ben je de eerste met kleur ' + colorMap[color] + '?')) {
             document.querySelectorAll('.final-score.green')[0].classList.toggle('final-selected');
             document.querySelectorAll('.final-score.second.green')[0].classList.remove('final-selected');
@@ -45,6 +47,9 @@ function updateScores() {
             document.querySelectorAll('.final-score.second.green')[0].classList.toggle('final-selected');
             document.querySelectorAll('.final-score.green')[0].classList.remove('final-selected');
         }
+
+claimed.push(color);
+}
 
         setBonusTotal();
     };
