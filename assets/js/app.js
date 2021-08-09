@@ -1,3 +1,6 @@
+const JOKER_VALUE = 1;
+const STAR_VALUE = 2;
+
 let scoreBlocks = document.querySelectorAll('.score-block:not(.final-score)');
 Array.prototype.forEach.call(scoreBlocks, (scoreBlock) => {
     scoreBlock.addEventListener('click', () => {
@@ -58,5 +61,43 @@ let jokers = document.getElementsByClassName('joker');
 Array.prototype.forEach.call(jokers, (joker) => {
     joker.addEventListener('click', () => {
         joker.classList.toggle('used');
+        setJokerTotal();
     }, false);
 });
+
+function setJokerTotal() {
+    let jokers = document.getElementsByClassName('joker');
+    let totalJokers = jokers.length;
+    let usedJokers = 0;
+    Array.prototype.forEach.call(jokers, (joker) => {
+        if (joker.classList.contains('used')) {
+            usedJokers++;
+        }
+    });
+
+    $('jokerTotal').innerText = (totalJokers - usedJokers) * JOKER_VALUE;
+}
+
+function setColumnTotal() {
+    let jokers = document.querySelectorAll('.column-score.active');
+    let totalJokers = jokers.length;
+    let usedJokers = 0;
+    Array.prototype.forEach.call(jokers, (joker) => {
+        if (joker.classList.contains('used')) {
+            usedJokers++;
+        }
+    });
+
+    $('jokerTotal').innerText = (totalJokers - usedJokers) * JOKER_VALUE;
+}
+
+function $(id) {
+    return document.getElementById(id);
+}
+function init() {
+    $('bonusTotal').innerText = '0';
+    $('columnsTotal').innerText = '0';
+    setJokerTotal();
+}
+
+init();

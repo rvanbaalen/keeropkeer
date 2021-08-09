@@ -30,10 +30,9 @@
             display: flow-root;
         }
         .jokers {
-            width: 100%;
             background: #fff;
-            display: flow-root;
             border-radius: 4px;
+            float: left;
         }
         #score {
             float: right;
@@ -96,6 +95,7 @@
             height: var(--block-size);
             border-radius: 5px;
             position: relative;
+            overflow: hidden;
         }
         .score-block:after {
             content: " ";
@@ -201,8 +201,8 @@
             width: 56px;
             padding-left: 7px;
         }
-        .totals.bonus label {
-            text-transform: uppercase;
+        .totals span.label {
+            margin-right: 4px;
         }
         .totals label {
             text-align: right;
@@ -213,8 +213,21 @@
             font-size: 12px;
             line-height: var(--block-size);
         }
-        .totals.columns {
+        .totals#bonus label {
+            text-transform: uppercase;
+        }
+        .totals#columns {
             margin-top: 34px;
+        }
+        .totals#jokers {
+            margin-top: 66px;
+        }
+        .totals#stars {
+            margin-top: 98px;
+        }
+        .totals#stars span.label {
+            color: red;
+            font-size: 14px;
         }
     </style>
 </head>
@@ -471,8 +484,10 @@
                 <span class="score-block final-score blue"><span>5</span></span>
                 <span class="score-block final-score red"><span>5</span></span>
                 <span class="score-block final-score orange"><span>5</span></span>
-                <div class="totals bonus"><label>Bonus</label><span class="label">=</span><span id="bonusTotal"></span></div>
-                <div class="totals columns"><label>A-O</label><span class="label">+</span><span id="columnsTotal"></span></div>
+                <div class="totals" id="bonus"><label>Bonus</label><span class="label">=</span><span id="bonusTotal" class="totalValue">15</span></div>
+                <div class="totals" id="columns"><label>A-O</label><span class="label">+</span><span id="columnsTotal"></span></div>
+                <div class="totals" id="jokers"><label>Jokers</label><span class="label">+</span><span id="jokerTotal"></span></div>
+                <div class="totals" id="stars"><label>Sterren</label><span class="label">-</span><span id="starsTotal"></span></div>
             </div>
             <div class="column">
                 <span class="score-block final-score green"><span>3</span></span>
