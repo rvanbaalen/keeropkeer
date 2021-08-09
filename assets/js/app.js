@@ -40,11 +40,11 @@ function updateScores() {
     let claimBonus = function (color) {
 if(claimed.indexOf(color) === -1) {
         if (confirm('Ben je de eerste met kleur ' + colorMap[color] + '?')) {
-            document.querySelectorAll('.final-score.green')[0].classList.toggle('final-selected');
-            document.querySelectorAll('.final-score.second.green')[0].classList.remove('final-selected');
+            document.querySelectorAll('.final-score.' + color)[0].classList.toggle('final-selected');
+            document.querySelectorAll('.final-score.second.' + color)[0].classList.remove('final-selected');
         } else {
-            document.querySelectorAll('.final-score.second.green')[0].classList.toggle('final-selected');
-            document.querySelectorAll('.final-score.green')[0].classList.remove('final-selected');
+            document.querySelectorAll('.final-score.second.' + color)[0].classList.toggle('final-selected');
+            document.querySelectorAll('.final-score.' + color)[0].classList.remove('final-selected');
         }
 
 claimed.push(color);
