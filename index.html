@@ -23,6 +23,16 @@
             font-family: Arial, sans-serif;
             font-weight: bolder;
         }
+        #overlay {
+            position: fixed;
+            left: 0; right: 0; top: 0; bottom: 0;
+            background: #000;
+            z-index: 9999;
+            transition: opacity 1s ease;
+        }
+        #overlay.show {
+            opacity: 0;
+        }
         #grid {
             float: left;
             display: flow-root;
@@ -147,7 +157,7 @@
         }
         span.column-score.taken {
             color: gray;
-            background: lightgray;
+            background: #626262;
             cursor: no-drop;
         }
         .column.spacer {
@@ -251,6 +261,7 @@
 </head>
 <body>
 <div id="app">
+    <div id="overlay"></div>
     <div id="grid">
         <div class="jokers rounded" id="jokerContainer"></div>
         <div class="columns">
