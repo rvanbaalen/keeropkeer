@@ -30,16 +30,14 @@
         .columns {
             display: flow-root;
         }
+        #blockGrid {
+            float: left;
+        }
         .jokers {
             background: #fff;
             border-radius: 4px;
             margin-right: 8px;
             float: left;
-        }
-        #score {
-            float: right;
-            background: #000;
-            display: flow-root;
         }
         .rounded-block {
             border-radius: 4px;
@@ -199,8 +197,9 @@
             right: -31px;
             margin-top: 2px;
             line-height: 30px;
-            width: 56px;
+            width: 49px;
             padding-left: 7px;
+            padding-right: 7px;
         }
         .totals span.label {
             margin-right: 4px;
@@ -233,295 +232,54 @@
         .totals#totals {
             margin-top: 130px;
         }
+        .totalValue {
+            float: right;
+        }
+        #newGame {
+            position: absolute;
+            font-size: 9px;
+            color: #fff;
+            bottom: -31px;
+            overflow: visible;
+            display: block;
+            text-transform: uppercase;
+            left: 5px;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
 <div id="app">
     <div id="grid">
-        <div class="jokers rounded">
-            <span class="joker">
-                !
-            </span>
-            <span class="joker">
-                !
-            </span>
-            <span class="joker">
-                !
-            </span>
-            <span class="joker">
-                !
-            </span>
-            <span class="joker">
-                !
-            </span>
-            <span class="joker">
-                !
-            </span>
-            <span class="joker">
-                !
-            </span>
-            <span class="joker">
-                !
-            </span>
-            </span>
+        <div class="jokers rounded" id="jokerContainer">
+
         </div>
         <div class="columns">
-            <div class="column">
-                <span class="letter rounded-block">A</span>
+            <div id="blockGrid">
 
-                <span class="score-block green">&nbsp;</span>
-                <span class="score-block orange">&nbsp;</span>
-                <span class="score-block blue"><span class="star">*</span></span>
-                <span class="score-block blue">&nbsp;</span>
-                <span class="score-block red">&nbsp;</span>
-                <span class="score-block red">&nbsp;</span>
-                <span class="score-block yellow">&nbsp;</span>
-
-                <div class="column-score">
-                    <span class="rounded-block column-score">5</span>
-                    <span class="rounded-block column-score">3</span>
-                </div>
-            </div>
-            <div class="column">
-                <span class="letter rounded-block">B</span>
-
-                <span class="score-block green">&nbsp;</span>
-                <span class="score-block green">&nbsp;</span>
-                <span class="score-block green">&nbsp;</span>
-                <span class="score-block red">&nbsp;</span>
-                <span class="score-block orange">&nbsp;</span>
-                <span class="score-block blue"><span class="star">*</span></span>
-                <span class="score-block yellow">&nbsp;</span>
-
-                <div class="column-score">
-                    <span class="rounded-block column-score">3</span>
-                    <span class="rounded-block column-score">2</span>
-                </div>
-            </div>
-            <div class="column">
-                <span class="letter rounded-block">C</span>
-
-                <span class="score-block green">&nbsp;</span>
-                <span class="score-block yellow"><span class="star">*</span></span>
-                <span class="score-block red">&nbsp;</span>
-                <span class="score-block red">&nbsp;</span>
-                <span class="score-block orange">&nbsp;</span>
-                <span class="score-block blue">&nbsp;</span>
-                <span class="score-block blue">&nbsp;</span>
-
-                <div class="column-score">
-                    <span class="rounded-block column-score">3</span>
-                    <span class="rounded-block column-score">2</span>
-                </div>
-            </div>
-            <div class="column">
-                <span class="letter rounded-block">D</span>
-
-                <span class="score-block yellow">&nbsp;</span>
-                <span class="score-block green">&nbsp;</span>
-                <span class="score-block green">&nbsp;</span>
-                <span class="score-block green">&nbsp;</span>
-                <span class="score-block orange">&nbsp;</span>
-                <span class="score-block red"><span class="star">*</span></span>
-                <span class="score-block blue">&nbsp;</span>
-
-                <div class="column-score">
-                    <span class="rounded-block column-score">3</span>
-                    <span class="rounded-block column-score">2</span>
-                </div>
-            </div>
-            <div class="column">
-                <span class="letter rounded-block">E</span>
-
-                <span class="score-block yellow">&nbsp;</span>
-                <span class="score-block yellow"><span class="star">*</span></span>
-                <span class="score-block green">&nbsp;</span>
-                <span class="score-block orange">&nbsp;</span>
-                <span class="score-block orange">&nbsp;</span>
-                <span class="score-block red">&nbsp;</span>
-                <span class="score-block blue">&nbsp;</span>
-
-                <div class="column-score">
-                    <span class="rounded-block column-score">2</span>
-                    <span class="rounded-block column-score">1</span>
-                </div>
-            </div>
-            <div class="column">
-                <span class="letter rounded-block">F</span>
-
-                <span class="score-block yellow">&nbsp;</span>
-                <span class="score-block yellow">&nbsp;</span>
-                <span class="score-block green">&nbsp;</span>
-                <span class="score-block orange"><span class="star">*</span></span>
-                <span class="score-block red">&nbsp;</span>
-                <span class="score-block red">&nbsp;</span>
-                <span class="score-block blue">&nbsp;</span>
-
-                <div class="column-score">
-                    <span class="rounded-block column-score">2</span>
-                    <span class="rounded-block column-score">1</span>
-                </div>
-            </div>
-            <div class="column">
-                <span class="letter rounded-block">G</span>
-
-                <span class="score-block yellow">&nbsp;</span>
-                <span class="score-block orange">&nbsp;</span>
-                <span class="score-block green"><span class="star">*</span></span>
-                <span class="score-block blue">&nbsp;</span>
-                <span class="score-block blue">&nbsp;</span>
-                <span class="score-block red">&nbsp;</span>
-                <span class="score-block red">&nbsp;</span>
-
-                <div class="column-score">
-                    <span class="rounded-block column-score">2</span>
-                    <span class="rounded-block column-score">1</span>
-                </div>
-            </div>
-            <div class="column highlight">
-                <span class="letter rounded-block">H</span>
-
-                <span class="score-block green"><span class="star">*</span></span>
-                <span class="score-block orange">&nbsp;</span>
-                <span class="score-block red">&nbsp;</span>
-                <span class="score-block blue">&nbsp;</span>
-                <span class="score-block blue">&nbsp;</span>
-                <span class="score-block yellow">&nbsp;</span>
-                <span class="score-block yellow">&nbsp;</span>
-
-                <div class="column-score">
-                    <span class="rounded-block column-score">1</span>
-                    <span class="rounded-block column-score">0</span>
-                </div>
-            </div>
-            <div class="column">
-                <span class="letter rounded-block">I</span>
-
-                <span class="score-block blue">&nbsp;</span>
-                <span class="score-block red">&nbsp;</span>
-                <span class="score-block red">&nbsp;</span>
-                <span class="score-block green">&nbsp;</span>
-                <span class="score-block orange">&nbsp;</span>
-                <span class="score-block yellow"><span class="star">*</span></span>
-                <span class="score-block yellow">&nbsp;</span>
-
-                <div class="column-score">
-                    <span class="rounded-block column-score">2</span>
-                    <span class="rounded-block column-score">1</span>
-                </div>
-            </div>
-            <div class="column">
-                <span class="letter rounded-block">J</span>
-
-                <span class="score-block blue">&nbsp;</span>
-                <span class="score-block blue"><span class="star">*</span></span>
-                <span class="score-block red">&nbsp;</span>
-                <span class="score-block green">&nbsp;</span>
-                <span class="score-block orange">&nbsp;</span>
-                <span class="score-block orange">&nbsp;</span>
-                <span class="score-block yellow">&nbsp;</span>
-
-                <div class="column-score">
-                    <span class="rounded-block column-score">2</span>
-                    <span class="rounded-block column-score">1</span>
-                </div>
-            </div>
-            <div class="column">
-                <span class="letter rounded-block">K</span>
-
-                <span class="score-block blue">&nbsp;</span>
-                <span class="score-block blue">&nbsp;</span>
-                <span class="score-block yellow">&nbsp;</span>
-                <span class="score-block yellow">&nbsp;</span>
-                <span class="score-block orange">&nbsp;</span>
-                <span class="score-block red"><span class="star">*</span></span>
-                <span class="score-block green">&nbsp;</span>
-
-                <div class="column-score">
-                    <span class="rounded-block column-score">2</span>
-                    <span class="rounded-block column-score">1</span>
-                </div>
-            </div>
-            <div class="column">
-                <span class="letter rounded-block">L</span>
-
-                <span class="score-block orange"><span class="star">*</span></span>
-                <span class="score-block orange">&nbsp;</span>
-                <span class="score-block yellow">&nbsp;</span>
-                <span class="score-block yellow">&nbsp;</span>
-                <span class="score-block red">&nbsp;</span>
-                <span class="score-block blue">&nbsp;</span>
-                <span class="score-block green">&nbsp;</span>
-
-                <div class="column-score">
-                    <span class="rounded-block column-score">3</span>
-                    <span class="rounded-block column-score">2</span>
-                </div>
-            </div>
-            <div class="column">
-                <span class="letter rounded-block">M</span>
-
-                <span class="score-block yellow">&nbsp;</span>
-                <span class="score-block orange">&nbsp;</span>
-                <span class="score-block orange">&nbsp;</span>
-                <span class="score-block orange">&nbsp;</span>
-                <span class="score-block red">&nbsp;</span>
-                <span class="score-block blue">&nbsp;</span>
-                <span class="score-block green"><span class="star">*</span></span>
-
-                <div class="column-score">
-                    <span class="rounded-block column-score">3</span>
-                    <span class="rounded-block column-score">2</span>
-                </div>
-            </div>
-            <div class="column">
-                <span class="letter rounded-block">N</span>
-
-                <span class="score-block yellow">&nbsp;</span>
-                <span class="score-block green">&nbsp;</span>
-                <span class="score-block green">&nbsp;</span>
-                <span class="score-block red"><span class="star">*</span></span>
-                <span class="score-block red">&nbsp;</span>
-                <span class="score-block blue">&nbsp;</span>
-                <span class="score-block orange">&nbsp;</span>
-
-                <div class="column-score">
-                    <span class="rounded-block column-score">3</span>
-                    <span class="rounded-block column-score">2</span>
-                </div>
-            </div>
-            <div class="column">
-                <span class="letter rounded-block">O</span>
-
-                <span class="score-block yellow">&nbsp;</span>
-                <span class="score-block green">&nbsp;</span>
-                <span class="score-block green">&nbsp;</span>
-                <span class="score-block blue">&nbsp;</span>
-                <span class="score-block red">&nbsp;</span>
-                <span class="score-block orange"><span class="star">*</span></span>
-                <span class="score-block orange">&nbsp;</span>
-
-                <div class="column-score">
-                    <span class="rounded-block column-score">5</span>
-                    <span class="rounded-block column-score">3</span>
-                </div>
             </div>
             <div class="column spacer">
                 &nbsp;
             </div>
             <div class="column">
-                <span class="score-block final-score green"><span>5</span></span>
-                <span class="score-block final-score yellow"><span>5</span></span>
-                <span class="score-block final-score blue"><span>5</span></span>
-                <span class="score-block final-score red"><span>5</span></span>
-                <span class="score-block final-score orange"><span>5</span></span>
+                <div id="scoreColumn1">
+                    <span class="score-block final-score green"><span>5</span></span>
+                    <span class="score-block final-score yellow"><span>5</span></span>
+                    <span class="score-block final-score blue"><span>5</span></span>
+                    <span class="score-block final-score red"><span>5</span></span>
+                    <span class="score-block final-score orange"><span>5</span></span>
+                </div>
+
                 <div class="totals" id="bonus"><label>Bonus</label><span class="label">=</span><span id="bonusTotal" class="totalValue">15</span></div>
-                <div class="totals" id="columns"><label>A-O</label><span class="label">+</span><span id="columnsTotal"></span></div>
-                <div class="totals" id="jokers"><label>Jokers</label><span class="label">+</span><span id="jokerTotal"></span></div>
-                <div class="totals" id="stars"><label>Stars</label><span class="label">-</span><span id="starsTotal"></span></div>
-                <div class="totals" id="totals"><label>Total</label><span class="label">&nbsp;</span><span id="totalScore"></span></div>
+                <div class="totals" id="columns"><label>A-O</label><span class="label">+</span><span id="columnsTotal" class="totalValue"></span></div>
+                <div class="totals" id="jokers"><label>Jokers</label><span class="label">+</span><span id="jokerTotal" class="totalValue"></span></div>
+                <div class="totals" id="stars"><label>Stars</label><span class="label">-</span><span id="starsTotal" class="totalValue"></span></div>
+                <div class="totals" id="totals">
+                    <label>Total</label><span class="label">&nbsp;</span><span id="totalScore" class="totalValue"></span>
+                    <a id="newGame">New game</a>
+                </div>
             </div>
-            <div class="column">
+            <div class="column" id="scoreColumn2">
                 <span class="score-block final-score second green"><span>3</span></span>
                 <span class="score-block final-score second yellow"><span>3</span></span>
                 <span class="score-block final-score second blue"><span>3</span></span>
@@ -530,10 +288,8 @@
             </div>
         </div>
     </div>
-    <div id="score">
-
-    </div>
 </div>
+<script src="assets/js/levels.js"></script>
 <script src="assets/js/app.js?adsasd"></script>
 </body>
 </html>
