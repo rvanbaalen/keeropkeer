@@ -1,6 +1,7 @@
 const JOKER_VALUE = 1;
 const STAR_VALUE = 2;
 const TOTAL_JOKERS = 8;
+const COLORS = ['green', 'yellow', 'blue', 'red', 'orange'];
 
 function createElement(el, options, appendTo, listen = []){
     let element = document.createElement(el);
@@ -60,11 +61,14 @@ function parseColumn(column) {
     return columnTemplate;
 }
 
-let selectedLevel = level1;
+let selectedLevel;
 function getSelectedLevel() {
     if (!selectedLevel) {
         let level = prompt('Kies een level (1-3)', '1');
         switch (level) {
+            case '2':
+                selectedLevel = level2;
+                break;
             default:
                 selectedLevel = level1;
         }
@@ -75,11 +79,25 @@ function getSelectedLevel() {
 function createState() {
     let state = {
         grid: getSelectedLevel(),
-        jokers: []
+        jokers: [],
+        colorScores: {
+            high: [],
+            low: []
+        }
     }, i;
     for (i = 0; i < TOTAL_JOKERS; i++) {
         state.jokers.push({selected: false});
     }
+    COLORS.forEach(color => {
+        state.colorScores.high.push({
+            color: color,
+            value: 0
+        });
+        state.colorScores.low.push({
+            color: color,
+            value: 0
+        });
+    });
 
     return state;
 }
@@ -139,9 +157,24 @@ function updateJokerState(row, selected) {
 
     if (found) {
         setState(currentState);
+        render(currentState);
+    }
+}
+function updateColorScoreState(group, color, value) {
+    let found = false;
+    let currentState = getState();
+    currentState.colorScores[group].forEach((colorScore, index) => {
+        if (colorScore.color === color) {
+            colorScore.value = value;
+            found = true;
+        }
+    });
+
+    if (found) {
+        setState(currentState);
+        render(currentState);
     }
 
-    render(currentState);
 }
 
 function registerEventListeners() {
@@ -157,10 +190,47 @@ function registerEventListeners() {
     });
 
     // Final score toggles
-    let finalScores = document.querySelectorAll('.final-score');
-    Array.prototype.forEach.call(finalScores, (finalScore) => {
-        finalScore.addEventListener('click', () => {
-            finalScore.classList.toggle('final-selected');
+    let getValueFromClass = function (element, high = 5, low = -1) {
+        if (!element.classList.contains('final-selected') && !element.classList.contains('selected')) {
+            // Not selected yet, value = 5
+            return high;
+        }
+        if (element.classList.contains('final-selected') && !element.classList.contains('selected')) {
+            // Already selected, toggle disabled state, value = -1
+            return low
+        }
+
+        return 0;
+    };
+    let getColorFromElement = function (element) {
+        let color = '';
+        COLORS.forEach(mappedColor => {
+            if (element.classList.contains(mappedColor)) {
+                color = mappedColor;
+            }
+        });
+
+        return color;
+    };
+    let highScores = document.querySelectorAll('#scoreColumn1 .final-score');
+    Array.prototype.forEach.call(highScores, (highScore, index) => {
+        highScore.addEventListener('click', () => {
+            updateColorScoreState(
+                'high',
+                getColorFromElement(highScore),
+                getValueFromClass(highScore, 5, -1)
+            );
+            setBonusTotal();
+        }, false);
+    });
+    let lowScores = document.querySelectorAll('#scoreColumn2 .final-score');
+    Array.prototype.forEach.call(lowScores, (lowScore, index) => {
+        lowScore.addEventListener('click', () => {
+            updateColorScoreState(
+                'low',
+                getColorFromElement(lowScore),
+                getValueFromClass(lowScore, 3, -1)
+            );
             setBonusTotal();
         }, false);
     });
@@ -316,6 +386,33 @@ function render(state) {
             renderedJoker.classList.add('used');
         }
         $('jokerContainer').append(renderedJoker);
+    });
+
+    $('scoreColumn1').innerHTML = '';
+    state.colorScores.high.forEach(colorScore => {
+        let element = createElement('span', {className: 'score-block final-score ' + colorScore.color});
+        if (colorScore.value === -1) {
+            element.classList.add('selected');
+        }
+        if (colorScore.value === 5) {
+            element.classList.add('final-selected');
+        }
+        createElement('span', {innerText: 5}, element);
+        $('scoreColumn1').append(element);
+    });
+
+    $('scoreColumn2').innerHTML = '';
+    state.colorScores.low.forEach(colorScore => {
+        let element = createElement('span', {className: 'score-block final-score ' + colorScore.color});
+        console.log(colorScore);
+        if (colorScore.value === -1) {
+            element.classList.add('selected');
+        }
+        if (colorScore.value === 3) {
+            element.classList.add('final-selected');
+        }
+        createElement('span', {innerText: 3}, element);
+        $('scoreColumn2').append(element);
     });
 
     registerEventListeners();
