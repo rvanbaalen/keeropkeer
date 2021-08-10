@@ -53,7 +53,7 @@ claimed.push(color);
         setBonusTotal();
     };
     let unclaimBonus = function (color) {
-        let element = document.querySelectorAll('.final-score.final-selected.green')[0];
+        let element = document.querySelectorAll('.final-score.final-selected.' + color)[0];
         if (element) {
             element.classList.remove('final-selected');
         }
@@ -68,7 +68,7 @@ claimed.push(color);
         if (all === allSelected) {
             claimBonus(color);
         } else {
-            // unclaimBonus(color);
+            unclaimBonus(color);
         }
     });
 }
