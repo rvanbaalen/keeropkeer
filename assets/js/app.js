@@ -1,7 +1,7 @@
 const JOKER_VALUE = 1;
 const STAR_VALUE = 2;
 
-window.onbeforeunload = unload();
+window.onbeforeunload = unload;
 
 function unload() {
  return confirm('Weet je zeker dat je weg wil gaan?');
@@ -38,17 +38,17 @@ function updateScores() {
         'orange': 'oranje'
     };
     let claimBonus = function (color) {
-if(claimed.indexOf(color) === -1) {
-        if (confirm('Ben je de eerste met kleur ' + colorMap[color] + '?')) {
-            document.querySelectorAll('.final-score.' + color)[0].classList.toggle('final-selected');
-            document.querySelectorAll('.final-score.second.' + color)[0].classList.remove('final-selected');
-        } else {
-            document.querySelectorAll('.final-score.second.' + color)[0].classList.toggle('final-selected');
-            document.querySelectorAll('.final-score.' + color)[0].classList.remove('final-selected');
-        }
+        if (claimed.indexOf(color) === -1) {
+            if (confirm('Ben je de eerste met kleur ' + colorMap[color] + '?')) {
+                document.querySelectorAll('.final-score.' + color)[0].classList.toggle('final-selected');
+                document.querySelectorAll('.final-score.second.' + color)[0].classList.remove('final-selected');
+            } else {
+                document.querySelectorAll('.final-score.second.' + color)[0].classList.toggle('final-selected');
+                document.querySelectorAll('.final-score.' + color)[0].classList.remove('final-selected');
+            }
 
-claimed.push(color);
-}
+            claimed.push(color);
+        }
 
         setBonusTotal();
     };
@@ -63,7 +63,6 @@ claimed.push(color);
     colors.forEach(color => {
         let all = document.getElementsByClassName(color).length - 2;
         let allSelected = document.querySelectorAll('.' + color + '.selected').length;
-        console.log('check', color, all, allSelected);
 
         if (all === allSelected) {
             claimBonus(color);
