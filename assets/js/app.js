@@ -73,10 +73,10 @@ function getSelectedLevel() {
                 selectedLevel = level1;
         }
 
-        $('overlay').classList.add('show');
-        setTimeout(() => {
-            $('overlay').remove();
-        }, 1000);
+        // $('overlay').classList.add('show');
+        // setTimeout(() => {
+        //     $('overlay').remove();
+        // }, 1000);
     }
 
     return selectedLevel;
