@@ -732,8 +732,7 @@ const level2 = [
                 color: 'yellow'
             },
             {
-                color: 'green',
-                star: true
+                color: 'green'
             },
             {
                 color: 'blue'
@@ -742,7 +741,8 @@ const level2 = [
                 color: 'red'
             },
             {
-                color: 'orange'
+                color: 'orange',
+                star: true
             },
             {
                 color: 'orange'
