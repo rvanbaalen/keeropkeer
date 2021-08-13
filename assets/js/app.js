@@ -64,10 +64,16 @@ function parseColumn(column) {
 let selectedLevel;
 function getSelectedLevel() {
     if (!selectedLevel) {
-        let level = prompt('Kies een level (1-3)', '1');
+        let level = prompt('Kies een level (1-4)', '1');
         switch (level) {
             case '2':
                 selectedLevel = level2;
+                break;
+            case '3':
+                selectedLevel = level3;
+                break;
+            case '4':
+                selectedLevel = level4;
                 break;
             default:
                 selectedLevel = level1;
@@ -189,7 +195,6 @@ function registerEventListeners() {
         scoreBlock.addEventListener('click', () => {
             let blockSelected = !scoreBlock.classList.contains('selected');
             updateBlockState(scoreBlock.data.column, scoreBlock.data.row, 'selected', blockSelected);
-            updateScores();
             setStarTotal();
         }, false);
     });
@@ -267,50 +272,6 @@ function registerEventListeners() {
             updateJokerState(index, state);
             setJokerTotal();
         }, false);
-    });
-}
-
-let claimed = [];
-function updateScores() {
-    const colorMap = {
-        'green': 'groen',
-        'blue': 'blauw',
-        'yellow': 'geel',
-        'red': 'rood',
-        'orange': 'oranje'
-    };
-    let claimBonus = function (color) {
-        if (claimed.indexOf(color) === -1) {
-            if (confirm('Ben je de eerste met kleur ' + colorMap[color] + '?')) {
-                document.querySelectorAll('.final-score.' + color)[0].classList.toggle('final-selected');
-                document.querySelectorAll('.final-score.second.' + color)[0].classList.remove('final-selected');
-            } else {
-                document.querySelectorAll('.final-score.second.' + color)[0].classList.toggle('final-selected');
-                document.querySelectorAll('.final-score.' + color)[0].classList.remove('final-selected');
-            }
-
-            claimed.push(color);
-        }
-
-        setBonusTotal();
-    };
-    let unclaimBonus = function (color) {
-        let element = document.querySelectorAll('.final-score.final-selected.' + color)[0];
-        if (element) {
-            element.classList.remove('final-selected');
-        }
-    }
-
-    let colors = ['green', 'yellow', 'red', 'blue', 'orange'];
-    colors.forEach(color => {
-        let all = document.getElementsByClassName(color).length - 2;
-        let allSelected = document.querySelectorAll('.' + color + '.selected').length;
-
-        if (all === allSelected) {
-            claimBonus(color);
-        } else {
-            unclaimBonus(color);
-        }
     });
 }
 
