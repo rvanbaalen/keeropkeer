@@ -373,7 +373,15 @@ function render(state) {
     setColumnTotal();
     setStarTotal();
 
-    hideIosAddressBar();
+    scroller();
+}
+
+// Hide address bar in iOS
+function scroller() {
+    document.getElementById('app').scrollIntoView({
+        behavior: 'smooth',
+        block: 'center'
+    });
 }
 function init() {
     render();
@@ -382,14 +390,6 @@ function init() {
     listen(EVENTS.NEW_GAME, () => {
         resetState();
     });
-
-    // Hide address bar in iOS
-    const scroller = function () {
-        document.getElementById('app').scrollIntoView({
-            behavior: 'smooth',
-            block: 'center'
-        });
-    };
     setTimeout(() => {
         scroller();
     }, 300);
