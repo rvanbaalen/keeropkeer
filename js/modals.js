@@ -46,10 +46,10 @@ export function createNewModal(options) {
     `;
 
     let modal = renderTemplate(modalTemplate, opts);
-    if (opts.buttons && typeof opts.buttons.cancel.callback === 'function') {
+    if (opts.buttons.cancel && typeof opts.buttons.cancel.callback === 'function') {
         modal.querySelector('#' + opts.buttons.cancel.id).addEventListener('click', opts.buttons.cancel.callback, false);
     }
-    if (opts.buttons && typeof opts.buttons.ok.callback === 'function') {
+    if (opts.buttons.ok && typeof opts.buttons.ok.callback === 'function') {
         modal.querySelector('#' + opts.buttons.ok.id).addEventListener('click', opts.buttons.ok.callback, false);
     }
 

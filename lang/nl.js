@@ -7,5 +7,8 @@ export default {
     label: {
         cancel: 'Annuleren',
         ok: 'OK'
+    },
+    notification: {
+        landscapeMode: 'Draai het scherm horizontaal om te beginnen.'
     }
 }

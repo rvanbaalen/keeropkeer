@@ -2,7 +2,8 @@ import { level1, level2, level3, level4 } from "./levels.js";
 import { $ } from "./utilities.js";
 import {EVENTS, listen} from "./eventbus.js";
 import {createElement, renderNewGameButton} from "./rendering.js";
-import {hideIosAddressBar, monitorDeviceOrientation} from "./orientation.js";
+import {createNewModal, toggleModal} from "./modals.js";
+import language from "../lang/default.js";
 
 const JOKER_VALUE = 1;
 const STAR_VALUE = 2;
@@ -403,5 +404,9 @@ function init() {
     }, false);
 }
 
-
 init();
+
+createNewModal({
+    id: 'orientationModal',
+    message: language.notification.landscapeMode
+});

@@ -316,3 +316,31 @@ a.button.button-cancel {
     bottom: 51px;
     cursor: pointer;
 }
+
+@media screen and (orientation:portrait) {
+    #orientationModal {
+        visibility: visible;
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    #orientationModal .modal-container {
+        width: 70%;
+    }
+
+    #grid {
+        opacity: 0;
+    }
+}
+/* landscape */
+@media screen and (orientation:landscape) {
+    #orientationModal {
+        visibility: hidden;
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    #grid {
+        opacity: 1;
+    }
+}
