@@ -1,4 +1,4 @@
-import { level1, level2, level3, level4 } from "./levels";
+import { level1, level2, level3, level4 } from "./levels.js";
 
 const JOKER_VALUE = 1;
 const STAR_VALUE = 2;
