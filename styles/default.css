@@ -18,6 +18,7 @@ body {
     background: #000;
     font-family: Arial, sans-serif;
     font-weight: bolder;
+    padding-top: 50px;
 }
 #app {
     display: grid;
@@ -25,7 +26,6 @@ body {
     align-items: center;
     height: 100vh;
     position: relative;
-    padding-top: 50px;
 }
 #grid {
     position: relative;

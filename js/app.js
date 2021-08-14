@@ -384,11 +384,12 @@ function init() {
     });
 
     // Hide address bar in iOS
-    monitorDeviceOrientation();
-
-    document.querySelector('#bonus label').addEventListener('click', () => {
-        hideIosAddressBar();
-    });
+    setTimeout(() => {
+        document.getElementById('app').scrollIntoView({
+            behavior: 'smooth',
+            block: 'center'
+        });
+    }, 1000);
 }
 
 $('totals').addEventListener('click', () => {
