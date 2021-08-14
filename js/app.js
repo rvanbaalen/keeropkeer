@@ -384,16 +384,24 @@ function init() {
     });
 
     // Hide address bar in iOS
-    setTimeout(() => {
+    const scroller = function () {
         document.getElementById('app').scrollIntoView({
             behavior: 'smooth',
             block: 'center'
         });
+    };
+    setTimeout(() => {
+        scroller();
     }, 1000);
+
+    $('totals').addEventListener('click', () => {
+        setTotalScore();
+    }, false);
+
+    $('bonus').addEventListener('click', () => {
+        scroller();
+    }, false);
 }
 
-$('totals').addEventListener('click', () => {
-    setTotalScore();
-}, false);
 
 init();
