@@ -2,6 +2,7 @@ import { level1, level2, level3, level4 } from "./levels.js";
 import { $ } from "./utilities.js";
 import {EVENTS, listen} from "./eventbus.js";
 import {createElement, renderNewGameButton} from "./rendering.js";
+import {hideIosAddressBar, monitorDeviceOrientation} from "./orientation.js";
 
 const JOKER_VALUE = 1;
 const STAR_VALUE = 2;
@@ -371,14 +372,22 @@ function render(state) {
     setJokerTotal();
     setColumnTotal();
     setStarTotal();
+
+    hideIosAddressBar();
 }
 function init() {
     render();
-
     renderNewGameButton();
 
     listen(EVENTS.NEW_GAME, () => {
         resetState();
+    });
+
+    // Hide address bar in iOS
+    monitorDeviceOrientation();
+
+    document.querySelector('#bonus label').addEventListener('click', () => {
+        hideIosAddressBar();
     });
 }
 
