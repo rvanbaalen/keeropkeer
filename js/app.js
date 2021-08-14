@@ -392,7 +392,7 @@ function init() {
     };
     setTimeout(() => {
         scroller();
-    }, 1000);
+    }, 300);
 
     $('totals').addEventListener('click', () => {
         setTotalScore();
