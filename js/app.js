@@ -1,26 +1,12 @@
 import { level1, level2, level3, level4 } from "./levels.js";
+import { $ } from "./utilities.js";
+import {EVENTS, listen} from "./eventbus.js";
+import {createElement, renderNewGameButton} from "./rendering.js";
 
 const JOKER_VALUE = 1;
 const STAR_VALUE = 2;
 const TOTAL_JOKERS = 8;
 const COLORS = ['green', 'yellow', 'blue', 'red', 'orange'];
-
-function createElement(el, options, appendTo, listen = []){
-    let element = document.createElement(el);
-    Object.keys(options).forEach(function (k){
-        element[k] = options[k];
-    });
-    if (listen.length > 0){
-        listen.forEach(function(l){
-            element.addEventListener(l.event, l.f);
-        });
-    }
-    if (appendTo) {
-        appendTo.append(element);
-    }
-
-    return element;
-}
 
 function parseColumn(column) {
     let columnTemplate = createElement('div', {className: 'column' + (column.column === 'H' ? ' highlight' : '')});
@@ -334,9 +320,6 @@ function setStarTotal() {
     $('starsTotal').innerText = getStarTotal();
 }
 
-function $(id) {
-    return document.getElementById(id);
-}
 function render(state) {
     if (typeof state === 'undefined') {
         state = getState();
@@ -347,13 +330,14 @@ function render(state) {
         $('blockGrid').append(parseColumn(column));
     });
 
-    $('jokerContainer').innerHTML = '';
+    let jokerContainer = $('jokerContainer');
+    jokerContainer.innerHTML = '';
     state.jokers.forEach(joker => {
         let renderedJoker = createElement('span', {className: 'joker', innerText: '!'});
         if (joker.selected) {
             renderedJoker.classList.add('used');
         }
-        $('jokerContainer').append(renderedJoker);
+        jokerContainer.append(renderedJoker);
     });
 
     $('scoreColumn1').innerHTML = '';
@@ -372,7 +356,6 @@ function render(state) {
     $('scoreColumn2').innerHTML = '';
     state.colorScores.low.forEach(colorScore => {
         let element = createElement('span', {className: 'score-block final-score ' + colorScore.color});
-        console.log(colorScore);
         if (colorScore.value === -1) {
             element.classList.add('selected');
         }
@@ -392,11 +375,11 @@ function render(state) {
 function init() {
     render();
 
-    $('newGame').addEventListener('click', function () {
-        if (confirm('Weet je zeker dat je een nieuw spel wil starten?')) {
-            resetState();
-        }
-    }, false);
+    renderNewGameButton();
+
+    listen(EVENTS.NEW_GAME, () => {
+        resetState();
+    });
 }
 
 $('totals').addEventListener('click', () => {

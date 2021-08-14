@@ -6,6 +6,8 @@
     --red: #c7153f;
     --blue: cornflowerblue;
     --green: mediumseagreen;
+    --button-primary-color: #3369ff;
+    --button-secondary-color: #8dabff;
 }
 html,
 body {
@@ -22,8 +24,10 @@ body {
     justify-content: center;
     align-items: center;
     height: 100vh;
+    position: relative;
 }
 #grid {
+    position: relative;
     float: left;
     display: flow-root;
     padding-bottom: 50px;
@@ -236,14 +240,78 @@ span.column-score.taken {
 .totalValue {
     float: right;
 }
-#newGame {
+
+.modal-overlay {
+    position: fixed;
+    background-color: rgba(0,0,0,.8);
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 999;
+    visibility: hidden;
+    opacity: 0;
+    pointer-events: none;
+    transition: all .3s;
+}
+.modal-overlay.show {
+    visibility: visible;
+    opacity: 1;
+    pointer-events: auto;
+}
+.modal-overlay > .modal-container {
+    width: 400px;
     position: absolute;
-    font-size: 9px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    padding: 30px;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 0 30px #000;
+}
+.modal-body p {
+    color: #333;
+}
+.modal-button-bar {
+    text-align: right;
+    margin-top: 30px;
+}
+a.button {
+    display: inline-block;
+    padding: 0.7em 1.4em;
+    margin: 0 0.3em 0.3em 0;
+    border-radius: 0.15em;
+    box-sizing: border-box;
+    text-decoration: none;
+    font-weight: 400;
     color: #fff;
-    bottom: -31px;
-    overflow: visible;
-    display: block;
+    background-color: #333;
+    box-shadow: inset 0 -0.6em 0 -0.35em rgba(0,0,0,0.17);
+    text-align: center;
+    position: relative;
+}
+a.button:active {
+    top: 0.1em;
+}
+a.button.button-confirm {
+    background-color: var(--button-primary-color);
+}
+a.button.button-cancel {
+    background-color: var(--button-secondary-color);
+}
+
+.new-game {
+    position: absolute;
+    background: var(--button-primary-color);
+    padding: 5px 5px 3px;
+    word-break: break-all;
+    width: 30px;
+    font-size: 10px;
     text-transform: uppercase;
-    left: 5px;
+    color: #fff;
+    text-align: center;
+    border-radius: 3px;
+    bottom: 51px;
     cursor: pointer;
 }
