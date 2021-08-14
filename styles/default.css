@@ -1,0 +1,249 @@
+:root {
+    --block-size: 30px;
+    --circle-size: 26px;
+    --orange: orange;
+    --yellow: #eecf35;
+    --red: #c7153f;
+    --blue: cornflowerblue;
+    --green: mediumseagreen;
+}
+html,
+body {
+    height: 100%;
+}
+body {
+    user-select: none;
+    background: #000;
+    font-family: Arial, sans-serif;
+    font-weight: bolder;
+}
+#app {
+    display: grid;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+#grid {
+    float: left;
+    display: flow-root;
+    padding-bottom: 50px;
+}
+.columns {
+    display: flow-root;
+}
+#blockGrid {
+    float: left;
+}
+.jokers {
+    background: #fff;
+    border-radius: 4px;
+    margin-right: 8px;
+    float: left;
+}
+.rounded-block {
+    border-radius: 4px;
+    background: #fff;
+    width: var(--block-size);
+    height: var(--block-size);
+    line-height: var(--block-size);
+    display: block;
+    text-align: center;
+}
+.joker {
+    cursor: pointer;
+    position: relative;
+    width: var(--block-size);
+    height: var(--block-size);
+    line-height: var(--block-size);
+    font-size: 20px;
+    background: mediumseagreen;
+    display: block;
+    margin: 5px;
+    border-radius: 50%;
+    color: #fff;
+    text-align: center;
+}
+.joker.used {
+    background: red;
+}
+.letter {
+    width: var(--block-size);
+    height: var(--block-size);
+    line-height: var(--block-size);
+    font-size: 20px;
+    background: #fff;
+    display: block;
+    margin: 0 auto 5px;
+    text-align: center;
+}
+.column {
+    float: left;
+    position: relative;
+}
+.column.highlight .score-block {
+    border: 2px #fff solid;
+    margin: 0 0 -2px -2px;
+    z-index: 99;
+}
+.score-block {
+    border: 2px #000 solid;
+    cursor: pointer;
+    margin: 0 0 -2px -2px;
+    background: blue;
+    display: block;
+    width: var(--block-size);
+    height: var(--block-size);
+    border-radius: 5px;
+    position: relative;
+    overflow: hidden;
+}
+.score-block:after {
+    content: " ";
+    background: #fff;
+    opacity: .2;
+    border-radius: 50%;
+    width: var(--circle-size);
+    height: var(--circle-size);
+    margin-left: -13px;
+    left: 50%;
+    position: absolute;
+    top: 2px;
+}
+.joker.used:before,
+.score-block.selected:before {
+    z-index: 99;
+    content: "X";
+    width: var(--block-size);
+    height: var(--block-size);
+    position: absolute;
+    font-size: 28px;
+    text-align: center;
+}
+.joker.used:before {
+    color: #000;
+    left:0;
+}
+.star {
+    opacity: .8;
+    color: white;
+    position: absolute;
+    width: var(--circle-size);
+    height: var(--circle-size);
+    line-height: 61px;
+    font-size: 70px;
+    text-align: center;
+    margin-left: 2px;
+}
+div.column-score {
+    margin-top: 5px;
+}
+span.column-score {
+    cursor: pointer;
+    margin-bottom: 2px;
+}
+span.column-score.active {
+    color: white;
+    background: mediumseagreen;
+}
+span.column-score.taken {
+    color: gray;
+    background: #626262;
+    cursor: no-drop;
+}
+.column.spacer {
+    width: 58px;
+}
+
+.green {
+    background: var(--green);
+}
+.blue {
+    background: var(--blue);
+}
+.red {
+    background: var(--red);
+}
+.yellow {
+    background: var(--yellow);
+}
+.orange {
+    background: var(--orange);
+}
+.white {
+    background: #fff;
+}
+.final-score span {
+    mix-blend-mode: color-burn;
+    text-align: center;
+    width: var(--block-size);
+    font-size: 24px;
+    position: absolute;
+    line-height: var(--block-size);
+}
+.final-score.final-selected span:after {
+    content: " ";
+    width: var(--circle-size);
+    height: var(--circle-size);
+    border: 2px green solid;
+    z-index: 999;
+    position: absolute;
+    border-radius: 50%;
+    left: 0;
+}
+.totals {
+    background: #fff;
+    height: 30px;
+    border-radius: 4px;
+    position: absolute;
+    right: -31px;
+    margin-top: 2px;
+    line-height: 30px;
+    width: 49px;
+    padding-left: 7px;
+    padding-right: 7px;
+}
+.totals span.label {
+    margin-right: 4px;
+}
+.totals label {
+    text-align: right;
+    position: absolute;
+    left: -54px;
+    color: #fff;
+    width: 50px;
+    font-size: 12px;
+    line-height: var(--block-size);
+}
+.totals#bonus label {
+    text-transform: uppercase;
+}
+.totals#columns {
+    margin-top: 34px;
+}
+.totals#jokers {
+    margin-top: 66px;
+}
+.totals#stars {
+    margin-top: 98px;
+}
+.totals#stars span.label {
+    color: red;
+    font-size: 14px;
+}
+.totals#totals {
+    margin-top: 130px;
+}
+.totalValue {
+    float: right;
+}
+#newGame {
+    position: absolute;
+    font-size: 9px;
+    color: #fff;
+    bottom: -31px;
+    overflow: visible;
+    display: block;
+    text-transform: uppercase;
+    left: 5px;
+    cursor: pointer;
+}
