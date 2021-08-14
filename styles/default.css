@@ -221,6 +221,9 @@ span.column-score.taken {
 }
 .totals#bonus label {
     text-transform: uppercase;
+    background: linear-gradient(to right, var(--orange), #ffef9e, #32e883, #4f52ff, #ff1e53);
+    background-clip: text;
+    color: transparent;
 }
 .totals#columns {
     margin-top: 34px;
@@ -238,6 +241,10 @@ span.column-score.taken {
 .totals#totals {
     margin-top: 130px;
 }
+#totalScore.hide:after {
+    content: "👀";
+}
+
 .totalValue {
     float: right;
 }
@@ -315,6 +322,9 @@ a.button.button-cancel {
     border-radius: 3px;
     bottom: 51px;
     cursor: pointer;
+}
+body.lang-nl .new-game {
+    font-size: 9px;
 }
 
 @media screen and (orientation:portrait) {

@@ -1,8 +1,8 @@
 import { level1, level2, level3, level4 } from "./levels.js";
 import { $ } from "./utilities.js";
 import {EVENTS, listen} from "./eventbus.js";
-import {createElement, renderNewGameButton} from "./rendering.js";
-import {createNewModal, toggleModal} from "./modals.js";
+import {createElement, renderNewGameButton, renderTotalScores} from "./rendering.js";
+import {createNewModal} from "./modals.js";
 import language from "../lang/default.js";
 
 const JOKER_VALUE = 1;
@@ -269,7 +269,14 @@ function getTotalScore() {
     return getBonusTotal() + getColumnTotal() + getJokerTotal() - getStarTotal();
 }
 function setTotalScore() {
-    $('totalScore').innerText = getTotalScore();
+    let element = $('totalScore');
+    if (element.classList.contains('hide')) {
+        element.innerText = getTotalScore();
+        element.classList.remove('hide');
+    } else {
+        element.innerText = '';
+        element.classList.add('hide');
+    }
 }
 function getBonusTotal() {
     let bonuses = document.querySelectorAll('.final-selected span');
@@ -385,6 +392,9 @@ function scroller() {
     });
 }
 function init() {
+    // Render total scores before the default render() function
+    renderTotalScores();
+
     render();
     renderNewGameButton();
 

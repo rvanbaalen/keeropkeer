@@ -6,7 +6,13 @@ export default {
     },
     label: {
         cancel: 'Annuleren',
-        ok: 'OK'
+        ok: 'OK',
+        newGame: 'Nieuw spel',
+        bonus: 'bonus',
+        columns: 'A-O',
+        stars: 'Sterren',
+        totals: 'Totaal',
+        jokers: 'Jokers'
     },
     notification: {
         landscapeMode: 'Draai het scherm horizontaal om te beginnen.'
