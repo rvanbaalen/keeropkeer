@@ -1,4 +1,4 @@
-const level1 = [
+export const level1 = [
     {
         column: 'A',
         score: [
@@ -510,7 +510,7 @@ const level1 = [
         ]
     }
 ];
-const level2 = [
+export const level2 = [
     {
         column: 'A',
         score: [
@@ -1022,7 +1022,7 @@ const level2 = [
         ]
     }
 ];
-const level3 = [
+export const level3 = [
     {
         column: 'A',
         score: [
@@ -1534,7 +1534,7 @@ const level3 = [
         ]
     }
 ];
-const level4 = [
+export const level4 = [
     {
         column: 'A',
         score: [

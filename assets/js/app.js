@@ -1,3 +1,5 @@
+import { level1, level2, level3, level4 } from "./levels";
+
 const JOKER_VALUE = 1;
 const STAR_VALUE = 2;
 const TOTAL_JOKERS = 8;
