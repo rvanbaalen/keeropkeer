@@ -368,6 +368,12 @@ body.lang-nl .new-game {
     #grid {
         opacity: 0;
     }
+
+    #selectLevelModal {
+        visibility: hidden;
+        opacity: 0;
+        pointer-events: none;
+    }
 }
 /* landscape */
 @media screen and (orientation:landscape) {
