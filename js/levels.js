@@ -1,4 +1,8 @@
-export const level1 = [
+import {dispatch, EVENTS, listen} from "./eventbus.js";
+import {createNewModal, toggleModal} from "./modals.js";
+import {$, forEachQuery} from "./utilities.js";
+
+const level1 = [
     {
         column: 'A',
         score: [
@@ -510,7 +514,7 @@ export const level1 = [
         ]
     }
 ];
-export const level2 = [
+const level2 = [
     {
         column: 'A',
         score: [
@@ -1022,7 +1026,7 @@ export const level2 = [
         ]
     }
 ];
-export const level3 = [
+const level3 = [
     {
         column: 'A',
         score: [
@@ -1534,7 +1538,7 @@ export const level3 = [
         ]
     }
 ];
-export const level4 = [
+const level4 = [
     {
         column: 'A',
         score: [
@@ -2046,3 +2050,94 @@ export const level4 = [
         ]
     }
 ];
+
+export class Level {
+    selectedLevel = false;
+    static levelMap = {
+        'level1': level1,
+        'level2': level2,
+        'level3': level3,
+        'level4': level4
+    };
+
+    constructor() {
+        listen(EVENTS.RESET_LEVEL, () => {
+            this.selectedLevel = false;
+        });
+        listen(EVENTS.LEVEL_SELECTED, () => {
+            if ($('selectLevelModal')) {
+                toggleModal('selectLevelModal');
+            }
+        });
+
+        let savedLevel = localStorage.getItem('kok_level');
+        if (savedLevel) {
+            this.level = savedLevel;
+        }
+    }
+
+    reset() {
+        localStorage.removeItem('kok_level');
+    }
+
+    select() {
+        if (this.selectedLevel !== false) {
+            dispatch(EVENTS.LEVEL_SELECTED, {level: this.selectedLevel});
+            return;
+        }
+
+        let self = this, levelModalId = 'selectLevelModal';
+        if ($(levelModalId)) {
+            toggleModal(levelModalId);
+            return;
+        }
+
+        createNewModal({
+            id: 'selectLevelModal',
+            visible: true,
+            message: false,
+            body: `
+                <div class="level-image-container">
+                    <a href="#">
+                        <span>Level 1</span>
+                        <img src="/images/level1.png" alt="Level 1" class="level-image" id="level1">
+                    </a>
+                    <a href="#">
+                        <span>Level 2</span>
+                        <img src="/images/level2.png" alt="Level 2" class="level-image" id="level2">
+                    </a>
+                    <a href="#">
+                        <span>Level 3</span>
+                        <img src="/images/level3.png" alt="Level 3" class="level-image" id="level3">
+                    </a>
+                    <a href="#">
+                        <span>Level 4</span>
+                        <img src="/images/level4.png" alt="Level 4" class="level-image" id="level4">
+                    </a>
+                </div>
+            `,
+            buttons: false
+        });
+
+        forEachQuery('.level-image-container a', level => {
+            level.addEventListener('click', (event) => {
+                event.preventDefault();
+                self.level = event.target.id;
+            }, false);
+        });
+    }
+
+    set level(value) {
+        localStorage.setItem('kok_level', value);
+        this.selectedLevel = Level.levelMap[value];
+        this.notify();
+    }
+
+    get level() {
+        return this.selectedLevel;
+    }
+
+    notify() {
+        dispatch(EVENTS.LEVEL_SELECTED, {level: this.selectedLevel});
+    }
+}

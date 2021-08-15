@@ -1,7 +1,12 @@
 import { $ } from './utilities.js';
 
 export const EVENTS = {
-    NEW_GAME: 'new-game'
+    NEW_GAME: 'new-game',
+    STATE_RESET: 'state-reset',
+    GAME_START: 'start-game',
+    RESET_LEVEL: 'reset-level',
+    LEVEL_SELECTED: 'level-selected',
+    SHOW_SCORE: 'show-score'
 };
 export function dispatch(eventName, eventData) {
     let event = new CustomEvent(eventName, { detail: eventData });

@@ -7,7 +7,8 @@ export function createNewModal(options) {
         id: 'modal-' + randomString(),
         message: 'No modal message is set.',
         buttons: false,
-        appendTo: '#app'
+        appendTo: '#app',
+        visible: false
     };
     let opts = {...defaultOptions, ...options};
 
@@ -25,16 +26,18 @@ export function createNewModal(options) {
     }
 
     const modalTemplate = `
-        <div class="modal-overlay" id="${opts.id}">
+        <div class="modal-overlay${opts.visible ? ' show' : ''}" id="${opts.id}">
             <div class="modal-container">
                 ${opts.title ? `
                 <div class="modal-title">
                     <h2>${opts.title}</h2>
                 </div>
                 ` : ``}
+                ${opts.body && !opts.message ? opts.body : `
                 <div class="modal-body">
                     <p>${opts.message}</p>
                 </div>
+                `}
                 ${opts.buttons ? `
                 <div class="modal-button-bar">
                     ${opts.buttons.cancel ? `<a href="#" id="${opts.buttons.cancel.id}" class="button button-cancel">${opts.buttons.cancel.label}</a>` : ``}

@@ -1,6 +1,6 @@
-import { level1, level2, level3, level4 } from "./levels.js";
-import { $ } from "./utilities.js";
-import {EVENTS, listen} from "./eventbus.js";
+import {Level} from "./levels.js";
+import {$, scrollInPosition} from "./utilities.js";
+import {dispatch, EVENTS, listen} from "./eventbus.js";
 import {createElement, renderNewGameButton, renderTotalScores} from "./rendering.js";
 import {createNewModal} from "./modals.js";
 import language from "../lang/default.js";
@@ -54,7 +54,9 @@ function parseColumn(column) {
 let selectedLevel;
 function getSelectedLevel() {
     if (!selectedLevel) {
-        let level = prompt('Kies een level (1-4)', '1');
+
+        let level = prompt(language.notification.selectLevel, '1');
+        // let level = '1';
         switch (level) {
             case '2':
                 selectedLevel = level2;
@@ -68,18 +70,13 @@ function getSelectedLevel() {
             default:
                 selectedLevel = level1;
         }
-
-        // $('overlay').classList.add('show');
-        // setTimeout(() => {
-        //     $('overlay').remove();
-        // }, 1000);
     }
 
     return selectedLevel;
 }
 function createState() {
     let state = {
-        grid: getSelectedLevel(),
+        grid: LevelState.level,
         jokers: [],
         colorScores: {
             high: [],
@@ -104,9 +101,8 @@ function createState() {
 }
 function resetState() {
     localStorage.removeItem('kok_state');
-    window.location.reload();
-
-    return true;
+    LevelState.reset();
+    dispatch(EVENTS.STATE_RESET);
 }
 function getState() {
     return JSON.parse(localStorage.getItem('kok_state')) || createState();
@@ -164,7 +160,7 @@ function updateJokerState(row, selected) {
 function updateColorScoreState(group, color, value) {
     let found = false;
     let currentState = getState();
-    currentState.colorScores[group].forEach((colorScore, index) => {
+    currentState.colorScores[group].forEach((colorScore) => {
         if (colorScore.color === color) {
             colorScore.value = value;
             found = true;
@@ -213,7 +209,7 @@ function registerEventListeners() {
         return color;
     };
     let highScores = document.querySelectorAll('#scoreColumn1 .final-score');
-    Array.prototype.forEach.call(highScores, (highScore, index) => {
+    Array.prototype.forEach.call(highScores, (highScore) => {
         highScore.addEventListener('click', () => {
             updateColorScoreState(
                 'high',
@@ -224,7 +220,7 @@ function registerEventListeners() {
         }, false);
     });
     let lowScores = document.querySelectorAll('#scoreColumn2 .final-score');
-    Array.prototype.forEach.call(lowScores, (lowScore, index) => {
+    Array.prototype.forEach.call(lowScores, (lowScore) => {
         lowScore.addEventListener('click', () => {
             updateColorScoreState(
                 'low',
@@ -375,46 +371,50 @@ function render(state) {
         $('scoreColumn2').append(element);
     });
 
+    renderTotalScores();
+    renderNewGameButton();
+
     registerEventListeners();
     setBonusTotal()
     setJokerTotal();
     setColumnTotal();
     setStarTotal();
 
-    scroller();
+    scrollInPosition();
 }
 
-// Hide address bar in iOS
-function scroller() {
-    document.getElementById('app').scrollIntoView({
-        behavior: 'smooth',
-        block: 'center'
-    });
-}
+const LevelState = new Level();
+
 function init() {
-    // Render total scores before the default render() function
-    renderTotalScores();
+    //render(getState());
 
-    render();
-    renderNewGameButton();
-
-    listen(EVENTS.NEW_GAME, () => {
-        resetState();
-    });
     setTimeout(() => {
-        scroller();
+        scrollInPosition();
     }, 300);
 
-    $('totals').addEventListener('click', () => {
-        setTotalScore();
-    }, false);
-
     $('bonus').addEventListener('click', () => {
-        scroller();
+        scrollInPosition();
     }, false);
 }
 
-init();
+listen(EVENTS.NEW_GAME, () => {
+    resetState();
+});
+listen(EVENTS.STATE_RESET, () => {
+    dispatch(EVENTS.GAME_START);
+});
+listen(EVENTS.GAME_START, () => {
+    LevelState.select();
+});
+listen(EVENTS.LEVEL_SELECTED, () => {
+    render(getState());
+});
+listen(EVENTS.SHOW_SCORE, () => {
+    setTotalScore();
+});
+
+dispatch(EVENTS.GAME_START);
+//init();
 
 createNewModal({
     id: 'orientationModal',

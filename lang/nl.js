@@ -15,6 +15,7 @@ export default {
         jokers: 'Jokers'
     },
     notification: {
-        landscapeMode: 'Draai het scherm horizontaal om te beginnen.'
+        landscapeMode: 'Draai het scherm horizontaal om te beginnen.',
+        selectLevel: 'Selecteer een level.'
     }
 }

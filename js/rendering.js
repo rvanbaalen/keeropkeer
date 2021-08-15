@@ -47,6 +47,11 @@ export function renderButton(options = {}) {
 }
 
 export function renderNewGameButton() {
+    const buttonId = 'newGame';
+    if ($(buttonId)) {
+        return;
+    }
+
     createNewModal({
         id: 'newGameModal',
         message: language.modal.newGame.body,
@@ -55,8 +60,7 @@ export function renderNewGameButton() {
                 id: 'newGameModalCancel',
                 label: language.label.cancel,
                 callback() {
-                    const modal = $('newGameModal');
-                    modal.classList.remove('show');
+                    toggleModal('newGameModal');
                     return false;
                 }
             },
@@ -64,7 +68,11 @@ export function renderNewGameButton() {
                 id: 'newGameModalConfirm',
                 label: language.label.ok,
                 callback() {
+                    // hide the modal first
+                    toggleModal('newGameModal');
+                    // Reset the game
                     dispatch(EVENTS.NEW_GAME);
+
                     return false;
                 }
             }
@@ -74,16 +82,22 @@ export function renderNewGameButton() {
     // New game button
     $('grid').append(
         renderButton({
-            callback() {
+            callback(event) {
+                event.preventDefault()
+                // Show modal
                 toggleModal('newGameModal');
             },
             label: language.label.newGame,
             className: 'new-game',
-            id: 'newGame'
+            id: buttonId
         }))
 }
 
 export function renderTotalScores() {
+    if ($('totalScores')) {
+        return;
+    }
+
     const totalScoresTemplate = `
     <div id="totalScores">
         <div class="totals" id="bonus"><label>${language.label.bonus}</label><span class="label">=</span><span id="bonusTotal" class="totalValue">15</span></div>
@@ -97,4 +111,8 @@ export function renderTotalScores() {
     `;
 
     $('scoreColumn').append(renderTemplate(totalScoresTemplate));
+
+    $('totals').addEventListener('click', () => {
+        dispatch(EVENTS.SHOW_SCORE);
+    }, false);
 }
