@@ -1,5 +1,5 @@
 import {Level} from "./levels.js";
-import {$, scrollInPosition} from "./utilities.js";
+import {$} from "./utilities.js";
 import {dispatch, EVENTS, listen} from "./eventbus.js";
 import {createElement, renderNewGameButton, renderTotalScores} from "./rendering.js";
 import {createNewModal} from "./modals.js";
@@ -379,23 +379,9 @@ function render(state) {
     setJokerTotal();
     setColumnTotal();
     setStarTotal();
-
-    scrollInPosition();
 }
 
 const LevelState = new Level();
-
-function init() {
-    //render(getState());
-
-    setTimeout(() => {
-        scrollInPosition();
-    }, 300);
-
-    $('bonus').addEventListener('click', () => {
-        scrollInPosition();
-    }, false);
-}
 
 listen(EVENTS.NEW_GAME, () => {
     resetState();
