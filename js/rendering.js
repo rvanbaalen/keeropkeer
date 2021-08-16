@@ -1,6 +1,5 @@
 import {$} from "./utilities.js";
 import {dispatch, EVENTS} from "./eventbus.js";
-import {createNewModal, toggleModal} from "./modals.js";
 import language from "../lang/default.js";
 
 export function createElement(el, options = {}, appendTo = undefined){
@@ -85,6 +84,6 @@ export function renderTotalScores() {
     $('scoreColumn').append(renderTemplate(totalScoresTemplate));
 
     $('totals').addEventListener('click', () => {
-        dispatch(EVENTS.SHOW_SCORE);
+        dispatch(EVENTS.SCORE_SHOW);
     }, false);
 }

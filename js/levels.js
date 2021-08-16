@@ -1,5 +1,5 @@
 import {dispatch, EVENTS, listen} from "./eventbus.js";
-import {createNewModal, toggleModal} from "./modals.js";
+import {createNewModal} from "./modals.js";
 import {$, forEachQuery} from "./utilities.js";
 
 const level1 = [
@@ -2061,13 +2061,11 @@ export class Level {
     };
 
     constructor() {
-        listen(EVENTS.RESET_LEVEL, () => {
+        listen(EVENTS.LEVEL_RESET, () => {
             this.selectedLevel = false;
         });
         listen(EVENTS.LEVEL_SELECTED, () => {
-            if ($('selectLevelModal')) {
-                toggleModal('selectLevelModal');
-            }
+            dispatch(EVENTS.MODAL_HIDE, {modalId: 'selectLevelModal'});
         });
 
         let savedLevel = localStorage.getItem('kok_level');
@@ -2088,7 +2086,8 @@ export class Level {
 
         let self = this, levelModalId = 'selectLevelModal';
         if ($(levelModalId)) {
-            toggleModal(levelModalId);
+            // Show modal
+            dispatch(EVENTS.MODAL_SHOW, {modalId: levelModalId});
             return;
         }
 

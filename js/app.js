@@ -2,13 +2,9 @@ import {Level} from "./levels.js";
 import {$} from "./utilities.js";
 import {dispatch, EVENTS, listen} from "./eventbus.js";
 import {createElement, renderNewGameButton, renderTotalScores} from "./rendering.js";
-import {createNewGameModal, createNewModal, toggleModal} from "./modals.js";
+import {createNewGameModal, createNewModal} from "./modals.js";
 import language from "../lang/default.js";
-
-const JOKER_VALUE = 1;
-const STAR_VALUE = 2;
-const TOTAL_JOKERS = 8;
-const COLORS = ['green', 'yellow', 'blue', 'red', 'orange'];
+import {Game} from "./Game.js";
 
 function parseColumn(column) {
     let columnTemplate = createElement('div', {className: 'column' + (column.column === 'H' ? ' highlight' : '')});
@@ -51,29 +47,6 @@ function parseColumn(column) {
     return columnTemplate;
 }
 
-let selectedLevel;
-function getSelectedLevel() {
-    if (!selectedLevel) {
-
-        let level = prompt(language.notification.selectLevel, '1');
-        // let level = '1';
-        switch (level) {
-            case '2':
-                selectedLevel = level2;
-                break;
-            case '3':
-                selectedLevel = level3;
-                break;
-            case '4':
-                selectedLevel = level4;
-                break;
-            default:
-                selectedLevel = level1;
-        }
-    }
-
-    return selectedLevel;
-}
 function createState() {
     let state = {
         grid: LevelState.level,
@@ -83,10 +56,10 @@ function createState() {
             low: []
         }
     }, i;
-    for (i = 0; i < TOTAL_JOKERS; i++) {
+    for (i = 0; i < Game.TOTAL_JOKERS; i++) {
         state.jokers.push({selected: false});
     }
-    COLORS.forEach(color => {
+    Game.COLORS.forEach(color => {
         state.colorScores.high.push({
             color: color,
             value: 0
@@ -102,7 +75,7 @@ function createState() {
 function resetState() {
     localStorage.removeItem('kok_state');
     LevelState.reset();
-    dispatch(EVENTS.STATE_RESET);
+    dispatch(EVENTS.GAME_RESET);
 }
 function getState() {
     return JSON.parse(localStorage.getItem('kok_state')) || createState();
@@ -296,7 +269,7 @@ function getJokerTotal() {
         }
     });
 
-    return (totalJokers - usedJokers) * JOKER_VALUE;
+    return (totalJokers - usedJokers) * Game.JOKER_VALUE;
 }
 function setJokerTotal() {
     $('jokerTotal').innerText = getJokerTotal();
@@ -319,7 +292,7 @@ function getStarTotal() {
     let activeStars = document.querySelectorAll('span.selected span.star').length;
     let totalStars = document.querySelectorAll('span.star').length;
 
-    return (totalStars - activeStars) * STAR_VALUE;
+    return (totalStars - activeStars) * Game.STAR_VALUE;
 }
 function setStarTotal() {
     $('starsTotal').innerText = getStarTotal();
@@ -376,8 +349,7 @@ function render(state) {
     let newGameModal = createNewGameModal();
     renderNewGameButton((event) => {
         event.preventDefault()
-        // Show modal
-        toggleModal(newGameModal.id);
+        dispatch(EVENTS.MODAL_TOGGLE, {modalId: newGameModal.id});
     });
 
     registerEventListeners();
@@ -389,10 +361,10 @@ function render(state) {
 
 const LevelState = new Level();
 
-listen(EVENTS.NEW_GAME, () => {
+listen(EVENTS.GAME_NEW, () => {
     resetState();
 });
-listen(EVENTS.STATE_RESET, () => {
+listen(EVENTS.GAME_RESET, () => {
     dispatch(EVENTS.GAME_START);
 });
 listen(EVENTS.GAME_START, () => {
@@ -401,9 +373,12 @@ listen(EVENTS.GAME_START, () => {
 listen(EVENTS.LEVEL_SELECTED, () => {
     render(getState());
 });
-listen(EVENTS.SHOW_SCORE, () => {
+listen(EVENTS.SCORE_SHOW, () => {
     setTotalScore();
 });
+
+new Game();
+
 
 dispatch(EVENTS.GAME_START);
 //init();

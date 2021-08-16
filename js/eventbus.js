@@ -1,18 +1,26 @@
 import { $ } from './utilities.js';
 
 export const EVENTS = {
-    NEW_GAME: 'new-game',
-    STATE_RESET: 'state-reset',
+    GAME_NEW: 'new-game',
+    GAME_RESET: 'state-reset',
     GAME_START: 'start-game',
-    RESET_LEVEL: 'reset-level',
+    LEVEL_RESET: 'reset-level',
     LEVEL_SELECTED: 'level-selected',
-    SHOW_SCORE: 'show-score',
-    TOGGLE_MODAL: 'toggle-modal'
+    SCORE_SHOW: 'show-score',
+    MODAL_TOGGLE: 'modal-toggle',
+    MODAL_HIDE: 'modal-hide',
+    MODAL_SHOW: 'modal-show'
 };
 export function dispatch(eventName, eventData) {
+    console.log('Fired event: ' + eventName, eventData);
     let event = new CustomEvent(eventName, { detail: eventData });
     $('app').dispatchEvent(event);
 }
 export function listen(eventName, callback) {
     $('app').addEventListener(eventName, callback, false);
+}
+export function registerEvents(events = []) {
+    events.forEach(event => {
+        listen(event.name, event.callback);
+    });
 }

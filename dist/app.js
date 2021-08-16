@@ -13,20 +13,28 @@ function forEachQuery(query, callback) {
 }
 
 const EVENTS = {
-    NEW_GAME: 'new-game',
-    STATE_RESET: 'state-reset',
+    GAME_NEW: 'new-game',
+    GAME_RESET: 'state-reset',
     GAME_START: 'start-game',
-    RESET_LEVEL: 'reset-level',
+    LEVEL_RESET: 'reset-level',
     LEVEL_SELECTED: 'level-selected',
-    SHOW_SCORE: 'show-score',
-    TOGGLE_MODAL: 'toggle-modal'
+    SCORE_SHOW: 'show-score',
+    MODAL_TOGGLE: 'modal-toggle',
+    MODAL_HIDE: 'modal-hide',
+    MODAL_SHOW: 'modal-show'
 };
 function dispatch(eventName, eventData) {
+    console.log('Fired event: ' + eventName, eventData);
     let event = new CustomEvent(eventName, { detail: eventData });
     $('app').dispatchEvent(event);
 }
 function listen(eventName, callback) {
     $('app').addEventListener(eventName, callback, false);
+}
+function registerEvents(events = []) {
+    events.forEach(event => {
+        listen(event.name, event.callback);
+    });
 }
 
 var nl = {
@@ -147,8 +155,37 @@ function renderTotalScores() {
     $('scoreColumn').append(renderTemplate(totalScoresTemplate));
 
     $('totals').addEventListener('click', () => {
-        dispatch(EVENTS.SHOW_SCORE);
+        dispatch(EVENTS.SCORE_SHOW);
     }, false);
+}
+
+function registerModalEvents() {
+    registerEvents([
+        {
+            name: EVENTS.MODAL_TOGGLE,
+            callback(event) {
+                if ($(event.detail.modalId)) {
+                    $(event.detail.modalId).classList.toggle('show');
+                }
+            }
+        },
+        {
+            name: EVENTS.MODAL_HIDE,
+            callback(event) {
+                if ($(event.detail.modalId) && $(event.detail.modalId).classList.contains('show')) {
+                    $(event.detail.modalId).classList.remove('show');
+                }
+            }
+        },
+        {
+            name: EVENTS.MODAL_SHOW,
+            callback(event) {
+                if ($(event.detail.modalId) && !$(event.detail.modalId).classList.contains('show')) {
+                    $(event.detail.modalId).classList.add('show');
+                }
+            }
+        }
+    ]);
 }
 
 function createNewModal(options) {
@@ -210,10 +247,6 @@ function createNewModal(options) {
     return modal;
 }
 
-function toggleModal(id) {
-    $(id).classList.toggle('show');
-}
-
 function createNewGameModal() {
     const modalId = 'newGameModal';
     return createNewModal({
@@ -225,7 +258,7 @@ function createNewGameModal() {
                 label: language.label.cancel,
                 callback(event) {
                     event.preventDefault();
-                    dispatch(EVENTS.TOGGLE_MODAL, {modalId});
+                    dispatch(EVENTS.MODAL_TOGGLE, {modalId});
                 }
             },
             ok: {
@@ -234,9 +267,9 @@ function createNewGameModal() {
                 callback(event) {
                     event.preventDefault();
                     // hide the modal first
-                    dispatch(EVENTS.TOGGLE_MODAL, {modalId});
+                    dispatch(EVENTS.MODAL_TOGGLE, {modalId});
                     // Reset the game
-                    dispatch(EVENTS.NEW_GAME);
+                    dispatch(EVENTS.GAME_NEW);
                 }
             }
         }
@@ -2302,13 +2335,11 @@ class Level {
     };
 
     constructor() {
-        listen(EVENTS.RESET_LEVEL, () => {
+        listen(EVENTS.LEVEL_RESET, () => {
             this.selectedLevel = false;
         });
         listen(EVENTS.LEVEL_SELECTED, () => {
-            if ($('selectLevelModal')) {
-                toggleModal('selectLevelModal');
-            }
+            dispatch(EVENTS.MODAL_HIDE, {modalId: 'selectLevelModal'});
         });
 
         let savedLevel = localStorage.getItem('kok_level');
@@ -2329,7 +2360,8 @@ class Level {
 
         let self = this, levelModalId = 'selectLevelModal';
         if ($(levelModalId)) {
-            toggleModal(levelModalId);
+            // Show modal
+            dispatch(EVENTS.MODAL_SHOW, {modalId: levelModalId});
             return;
         }
 
@@ -2383,10 +2415,22 @@ class Level {
     }
 }
 
-const JOKER_VALUE = 1;
-const STAR_VALUE = 2;
-const TOTAL_JOKERS = 8;
-const COLORS = ['green', 'yellow', 'blue', 'red', 'orange'];
+class EventRegistry {
+    constructor() {
+        registerModalEvents();
+    }
+}
+
+class Game {
+    static JOKER_VALUE = 1;
+    static STAR_VALUE = 2;
+    static TOTAL_JOKERS = 8;
+    static COLORS = ['green', 'yellow', 'blue', 'red', 'orange'];
+
+    constructor() {
+        new EventRegistry();
+    }
+}
 
 function parseColumn(column) {
     let columnTemplate = createElement('div', {className: 'column' + (column.column === 'H' ? ' highlight' : '')});
@@ -2428,6 +2472,7 @@ function parseColumn(column) {
 
     return columnTemplate;
 }
+
 function createState() {
     let state = {
         grid: LevelState.level,
@@ -2437,10 +2482,10 @@ function createState() {
             low: []
         }
     }, i;
-    for (i = 0; i < TOTAL_JOKERS; i++) {
+    for (i = 0; i < Game.TOTAL_JOKERS; i++) {
         state.jokers.push({selected: false});
     }
-    COLORS.forEach(color => {
+    Game.COLORS.forEach(color => {
         state.colorScores.high.push({
             color: color,
             value: 0
@@ -2456,7 +2501,7 @@ function createState() {
 function resetState() {
     localStorage.removeItem('kok_state');
     LevelState.reset();
-    dispatch(EVENTS.STATE_RESET);
+    dispatch(EVENTS.GAME_RESET);
 }
 function getState() {
     return JSON.parse(localStorage.getItem('kok_state')) || createState();
@@ -2650,7 +2695,7 @@ function getJokerTotal() {
         }
     });
 
-    return (totalJokers - usedJokers) * JOKER_VALUE;
+    return (totalJokers - usedJokers) * Game.JOKER_VALUE;
 }
 function setJokerTotal() {
     $('jokerTotal').innerText = getJokerTotal();
@@ -2673,7 +2718,7 @@ function getStarTotal() {
     let activeStars = document.querySelectorAll('span.selected span.star').length;
     let totalStars = document.querySelectorAll('span.star').length;
 
-    return (totalStars - activeStars) * STAR_VALUE;
+    return (totalStars - activeStars) * Game.STAR_VALUE;
 }
 function setStarTotal() {
     $('starsTotal').innerText = getStarTotal();
@@ -2730,8 +2775,7 @@ function render(state) {
     let newGameModal = createNewGameModal();
     renderNewGameButton((event) => {
         event.preventDefault();
-        // Show modal
-        toggleModal(newGameModal.id);
+        dispatch(EVENTS.MODAL_TOGGLE, {modalId: newGameModal.id});
     });
 
     registerEventListeners();
@@ -2743,10 +2787,10 @@ function render(state) {
 
 const LevelState = new Level();
 
-listen(EVENTS.NEW_GAME, () => {
+listen(EVENTS.GAME_NEW, () => {
     resetState();
 });
-listen(EVENTS.STATE_RESET, () => {
+listen(EVENTS.GAME_RESET, () => {
     dispatch(EVENTS.GAME_START);
 });
 listen(EVENTS.GAME_START, () => {
@@ -2755,9 +2799,12 @@ listen(EVENTS.GAME_START, () => {
 listen(EVENTS.LEVEL_SELECTED, () => {
     render(getState());
 });
-listen(EVENTS.SHOW_SCORE, () => {
+listen(EVENTS.SCORE_SHOW, () => {
     setTotalScore();
 });
+
+new Game();
+
 
 dispatch(EVENTS.GAME_START);
 //init();

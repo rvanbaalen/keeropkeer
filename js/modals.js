@@ -1,7 +1,36 @@
 import {$, randomString} from "./utilities.js";
 import language from "../lang/default.js";
 import { renderTemplate } from "./rendering.js";
-import {dispatch, EVENTS} from "./eventbus";
+import {dispatch, EVENTS, listen, registerEvents} from "./eventbus";
+
+export function registerModalEvents() {
+    registerEvents([
+        {
+            name: EVENTS.MODAL_TOGGLE,
+            callback(event) {
+                if ($(event.detail.modalId)) {
+                    $(event.detail.modalId).classList.toggle('show');
+                }
+            }
+        },
+        {
+            name: EVENTS.MODAL_HIDE,
+            callback(event) {
+                if ($(event.detail.modalId) && $(event.detail.modalId).classList.contains('show')) {
+                    $(event.detail.modalId).classList.remove('show');
+                }
+            }
+        },
+        {
+            name: EVENTS.MODAL_SHOW,
+            callback(event) {
+                if ($(event.detail.modalId) && !$(event.detail.modalId).classList.contains('show')) {
+                    $(event.detail.modalId).classList.add('show');
+                }
+            }
+        }
+    ]);
+}
 
 export function createNewModal(options) {
     const defaultOptions = {
@@ -62,10 +91,6 @@ export function createNewModal(options) {
     return modal;
 }
 
-export function toggleModal(id) {
-    $(id).classList.toggle('show');
-}
-
 export function createNewGameModal() {
     const modalId = 'newGameModal';
     return createNewModal({
@@ -77,7 +102,7 @@ export function createNewGameModal() {
                 label: language.label.cancel,
                 callback(event) {
                     event.preventDefault();
-                    dispatch(EVENTS.TOGGLE_MODAL, {modalId});
+                    dispatch(EVENTS.MODAL_TOGGLE, {modalId});
                 }
             },
             ok: {
@@ -86,9 +111,9 @@ export function createNewGameModal() {
                 callback(event) {
                     event.preventDefault();
                     // hide the modal first
-                    dispatch(EVENTS.TOGGLE_MODAL, {modalId});
+                    dispatch(EVENTS.MODAL_TOGGLE, {modalId});
                     // Reset the game
-                    dispatch(EVENTS.NEW_GAME);
+                    dispatch(EVENTS.GAME_NEW);
                 }
             }
         }
