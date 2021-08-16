@@ -18,7 +18,8 @@ const EVENTS = {
     GAME_START: 'start-game',
     RESET_LEVEL: 'reset-level',
     LEVEL_SELECTED: 'level-selected',
-    SHOW_SCORE: 'show-score'
+    SHOW_SCORE: 'show-score',
+    TOGGLE_MODAL: 'toggle-modal'
 };
 function dispatch(eventName, eventData) {
     let event = new CustomEvent(eventName, { detail: eventData });
@@ -107,51 +108,23 @@ function renderButton(options = {}) {
     return button;
 }
 
-function renderNewGameButton() {
+function renderNewGameButton(cb) {
     const buttonId = 'newGame';
     if ($(buttonId)) {
         return;
     }
 
-    createNewModal({
-        id: 'newGameModal',
-        message: language.modal.newGame.body,
-        buttons: {
-            cancel: {
-                id: 'newGameModalCancel',
-                label: language.label.cancel,
-                callback() {
-                    toggleModal('newGameModal');
-                    return false;
-                }
-            },
-            ok: {
-                id: 'newGameModalConfirm',
-                label: language.label.ok,
-                callback() {
-                    // hide the modal first
-                    toggleModal('newGameModal');
-                    // Reset the game
-                    dispatch(EVENTS.NEW_GAME);
-
-                    return false;
-                }
-            }
-        }
+    const button = renderButton({
+        callback: cb,
+        label: language.label.newGame,
+        className: 'new-game',
+        id: buttonId
     });
 
     // New game button
-    $('grid').append(
-        renderButton({
-            callback(event) {
-                event.preventDefault();
-                // Show modal
-                toggleModal('newGameModal');
-            },
-            label: language.label.newGame,
-            className: 'new-game',
-            id: buttonId
-        }));
+    $('grid').append(button);
+
+    return button;
 }
 
 function renderTotalScores() {
@@ -239,6 +212,35 @@ function createNewModal(options) {
 
 function toggleModal(id) {
     $(id).classList.toggle('show');
+}
+
+function createNewGameModal() {
+    const modalId = 'newGameModal';
+    return createNewModal({
+        id: modalId,
+        message: language.modal.newGame.body,
+        buttons: {
+            cancel: {
+                id: modalId + 'Cancel',
+                label: language.label.cancel,
+                callback(event) {
+                    event.preventDefault();
+                    dispatch(EVENTS.TOGGLE_MODAL, {modalId});
+                }
+            },
+            ok: {
+                id: modalId + 'Confirm',
+                label: language.label.ok,
+                callback(event) {
+                    event.preventDefault();
+                    // hide the modal first
+                    dispatch(EVENTS.TOGGLE_MODAL, {modalId});
+                    // Reset the game
+                    dispatch(EVENTS.NEW_GAME);
+                }
+            }
+        }
+    });
 }
 
 const level1 = [
@@ -2724,7 +2726,13 @@ function render(state) {
     });
 
     renderTotalScores();
-    renderNewGameButton();
+
+    let newGameModal = createNewGameModal();
+    renderNewGameButton((event) => {
+        event.preventDefault();
+        // Show modal
+        toggleModal(newGameModal.id);
+    });
 
     registerEventListeners();
     setBonusTotal();

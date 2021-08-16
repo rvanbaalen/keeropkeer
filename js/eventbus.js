@@ -6,7 +6,8 @@ export const EVENTS = {
     GAME_START: 'start-game',
     RESET_LEVEL: 'reset-level',
     LEVEL_SELECTED: 'level-selected',
-    SHOW_SCORE: 'show-score'
+    SHOW_SCORE: 'show-score',
+    TOGGLE_MODAL: 'toggle-modal'
 };
 export function dispatch(eventName, eventData) {
     let event = new CustomEvent(eventName, { detail: eventData });

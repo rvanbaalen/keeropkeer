@@ -46,51 +46,23 @@ export function renderButton(options = {}) {
     return button;
 }
 
-export function renderNewGameButton() {
+export function renderNewGameButton(cb) {
     const buttonId = 'newGame';
     if ($(buttonId)) {
         return;
     }
 
-    createNewModal({
-        id: 'newGameModal',
-        message: language.modal.newGame.body,
-        buttons: {
-            cancel: {
-                id: 'newGameModalCancel',
-                label: language.label.cancel,
-                callback() {
-                    toggleModal('newGameModal');
-                    return false;
-                }
-            },
-            ok: {
-                id: 'newGameModalConfirm',
-                label: language.label.ok,
-                callback() {
-                    // hide the modal first
-                    toggleModal('newGameModal');
-                    // Reset the game
-                    dispatch(EVENTS.NEW_GAME);
-
-                    return false;
-                }
-            }
-        }
+    const button = renderButton({
+        callback: cb,
+        label: language.label.newGame,
+        className: 'new-game',
+        id: buttonId
     });
 
     // New game button
-    $('grid').append(
-        renderButton({
-            callback(event) {
-                event.preventDefault()
-                // Show modal
-                toggleModal('newGameModal');
-            },
-            label: language.label.newGame,
-            className: 'new-game',
-            id: buttonId
-        }))
+    $('grid').append(button);
+
+    return button;
 }
 
 export function renderTotalScores() {

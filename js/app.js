@@ -2,7 +2,7 @@ import {Level} from "./levels.js";
 import {$} from "./utilities.js";
 import {dispatch, EVENTS, listen} from "./eventbus.js";
 import {createElement, renderNewGameButton, renderTotalScores} from "./rendering.js";
-import {createNewModal} from "./modals.js";
+import {createNewGameModal, createNewModal, toggleModal} from "./modals.js";
 import language from "../lang/default.js";
 
 const JOKER_VALUE = 1;
@@ -372,7 +372,13 @@ function render(state) {
     });
 
     renderTotalScores();
-    renderNewGameButton();
+
+    let newGameModal = createNewGameModal();
+    renderNewGameButton((event) => {
+        event.preventDefault()
+        // Show modal
+        toggleModal(newGameModal.id);
+    });
 
     registerEventListeners();
     setBonusTotal()

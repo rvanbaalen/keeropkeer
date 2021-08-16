@@ -11,7 +11,8 @@
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "npx rollup -c"
+    "build": "npx rollup -c",
+    "watch": "npx rollup -cw"
   },
   "repository": {
     "type": "git",

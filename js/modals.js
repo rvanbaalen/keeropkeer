@@ -1,6 +1,7 @@
 import {$, randomString} from "./utilities.js";
 import language from "../lang/default.js";
 import { renderTemplate } from "./rendering.js";
+import {dispatch, EVENTS} from "./eventbus";
 
 export function createNewModal(options) {
     const defaultOptions = {
@@ -63,4 +64,33 @@ export function createNewModal(options) {
 
 export function toggleModal(id) {
     $(id).classList.toggle('show');
+}
+
+export function createNewGameModal() {
+    const modalId = 'newGameModal';
+    return createNewModal({
+        id: modalId,
+        message: language.modal.newGame.body,
+        buttons: {
+            cancel: {
+                id: modalId + 'Cancel',
+                label: language.label.cancel,
+                callback(event) {
+                    event.preventDefault();
+                    dispatch(EVENTS.TOGGLE_MODAL, {modalId});
+                }
+            },
+            ok: {
+                id: modalId + 'Confirm',
+                label: language.label.ok,
+                callback(event) {
+                    event.preventDefault();
+                    // hide the modal first
+                    dispatch(EVENTS.TOGGLE_MODAL, {modalId});
+                    // Reset the game
+                    dispatch(EVENTS.NEW_GAME);
+                }
+            }
+        }
+    });
 }
