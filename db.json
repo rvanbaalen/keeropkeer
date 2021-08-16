@@ -2,7 +2,7 @@
   "games": [
     {
       "id": 1,
-      "members": [],
+      "players": [],
       "code": "213das",
       "data": {
         "columnScores": {
@@ -41,7 +41,7 @@
       }
     }
   ],
-  "members": [
+  "players": [
     {
       "id": 1,
       "name": "Rando"
