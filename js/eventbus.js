@@ -9,7 +9,9 @@ export const EVENTS = {
     SCORE_SHOW: 'show-score',
     MODAL_TOGGLE: 'modal-toggle',
     MODAL_HIDE: 'modal-hide',
-    MODAL_SHOW: 'modal-show'
+    MODAL_SHOW: 'modal-show',
+    LOBBY_CREATED: 'lobby-created',
+    LOBBY_JOINED: 'lobby-joined'
 };
 export function dispatch(eventName, eventData) {
     console.log('Fired event: ' + eventName, eventData);

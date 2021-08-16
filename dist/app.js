@@ -21,7 +21,9 @@ const EVENTS = {
     SCORE_SHOW: 'show-score',
     MODAL_TOGGLE: 'modal-toggle',
     MODAL_HIDE: 'modal-hide',
-    MODAL_SHOW: 'modal-show'
+    MODAL_SHOW: 'modal-show',
+    LOBBY_CREATED: 'lobby-created',
+    LOBBY_JOINED: 'lobby-joined'
 };
 function dispatch(eventName, eventData) {
     console.log('Fired event: ' + eventName, eventData);
@@ -2421,6 +2423,46 @@ class EventRegistry {
     }
 }
 
+const newGameData = {
+    "code": "",
+    "members": [],
+    "data": {
+        "columnScores": {
+            "A": -1,
+            "B": -1,
+            "C": -1,
+            "D": -1,
+            "E": -1,
+            "F": -1,
+            "G": -1,
+            "H": -1,
+            "I": -1,
+            "J": -1,
+            "K": -1,
+            "L": -1,
+            "M": -1,
+            "N": -1,
+            "O": -1
+        },
+        "colorScores": {
+            "high": {
+                "yellow": -1,
+                "green": -1,
+                "blue": -1,
+                "red": -1,
+                "orange": -1
+            },
+            "low": {
+                "yellow": -1,
+                "green": -1,
+                "blue": -1,
+                "red": -1,
+                "orange": -1
+            }
+        }
+    }
+};
+
 class Game {
     static JOKER_VALUE = 1;
     static STAR_VALUE = 2;
@@ -2429,6 +2471,13 @@ class Game {
 
     constructor() {
         new EventRegistry();
+    }
+
+    static newGameData(gameKey = '') {
+        const newGame = {...newGameData};
+        newGame.code = gameKey;
+
+        return newGame;
     }
 }
 
