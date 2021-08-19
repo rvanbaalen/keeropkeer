@@ -11,10 +11,3 @@ export function forEachQuery(query, callback) {
         document.querySelectorAll(query), callback
     );
 }
-
-export function scrollInPosition() {
-    document.getElementById('app').scrollIntoView({
-        behavior: 'smooth',
-        block: 'center'
-    });
-}

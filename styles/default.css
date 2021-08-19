@@ -340,6 +340,12 @@ body.lang-nl .new-game {
     position: relative;
     padding: 10px;
     margin: 10px 10px 10px 30px;
+    border: 2px transparent solid;
+    transition: border .3s ease-in-out, transform .3s ease-in-out;
+}
+.level-image-container a.selected {
+    border: 2px var(--button-primary-color) solid;
+    transform: translateY(-4px);
 }
 .level-image-container a span {
     display: block;

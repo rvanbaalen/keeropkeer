@@ -16,6 +16,8 @@ export default {
     },
     notification: {
         landscapeMode: 'Draai het scherm horizontaal om te beginnen.',
-        selectLevel: 'Selecteer een level.'
+        selectLevel: 'Selecteer een level.',
+        playerName: 'Wat is je naam?',
+        creatingLobby: 'Bezig met het aanmaken van de lobby...'
     }
 }

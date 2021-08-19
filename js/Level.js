@@ -1,6 +1,7 @@
-import {dispatch, EVENTS, listen} from "./eventbus.js";
-import {createNewModal} from "./modals.js";
-import {$, forEachQuery} from "./utilities.js";
+import {dispatch, EVENTS, listen} from "./events.js";
+import {createLevelSelectModal} from "./modals.js";
+import {$} from "./utilities.js";
+import {GameStorage} from "./GameStorage.js";
 
 const level1 = [
     {
@@ -2054,89 +2055,69 @@ const level4 = [
 export class Level {
     selectedLevel = false;
     static levelMap = {
-        'level1': level1,
-        'level2': level2,
-        'level3': level3,
-        'level4': level4
+        level1,
+        level2,
+        level3,
+        level4
     };
 
     constructor() {
         listen(EVENTS.LEVEL_RESET, () => {
             this.selectedLevel = false;
         });
-        listen(EVENTS.LEVEL_SELECTED, () => {
+        listen(EVENTS.LEVEL_LOADED, () => {
             dispatch(EVENTS.MODAL_HIDE, {modalId: 'selectLevelModal'});
         });
+        listen(EVENTS.LEVEL_SELECT, (event) => {
+            // Level selected via external input
+            const {selectedLevel} = event.detail;
+            this.level = selectedLevel;
+            this.save();
 
-        let savedLevel = localStorage.getItem('kok_level');
-        if (savedLevel) {
-            this.level = savedLevel;
-        }
+            // Notify the application
+            this.notify();
+        });
+
+        // Level selected via localStorage
+        this.selectedLevel = GameStorage.getItem('level');
     }
 
     reset() {
-        localStorage.removeItem('kok_level');
+        GameStorage.removeItem('level');
+        this.selectedLevel = false;
     }
 
     select() {
-        if (this.selectedLevel !== false) {
-            dispatch(EVENTS.LEVEL_SELECTED, {level: this.selectedLevel});
-            return;
-        }
+        const levelModalId = 'selectLevelModal';
 
-        let self = this, levelModalId = 'selectLevelModal';
+        // Check if modal already exists in the DOM
         if ($(levelModalId)) {
             // Show modal
             dispatch(EVENTS.MODAL_SHOW, {modalId: levelModalId});
             return;
         }
 
-        createNewModal({
-            id: 'selectLevelModal',
-            visible: true,
-            message: false,
-            body: `
-                <div class="level-image-container">
-                    <a href="#">
-                        <span>Level 1</span>
-                        <img src="/images/level1.png" alt="Level 1" class="level-image" id="level1">
-                    </a>
-                    <a href="#">
-                        <span>Level 2</span>
-                        <img src="/images/level2.png" alt="Level 2" class="level-image" id="level2">
-                    </a>
-                    <a href="#">
-                        <span>Level 3</span>
-                        <img src="/images/level3.png" alt="Level 3" class="level-image" id="level3">
-                    </a>
-                    <a href="#">
-                        <span>Level 4</span>
-                        <img src="/images/level4.png" alt="Level 4" class="level-image" id="level4">
-                    </a>
-                </div>
-            `,
-            buttons: false
-        });
-
-        forEachQuery('.level-image-container a', level => {
-            level.addEventListener('click', (event) => {
-                event.preventDefault();
-                self.level = event.target.id;
-            }, false);
-        });
+        createLevelSelectModal();
     }
 
     set level(value) {
-        localStorage.setItem('kok_level', value);
-        this.selectedLevel = Level.levelMap[value];
-        this.notify();
+        if (value === false) {
+            this.selectedLevel = false;
+            return;
+        }
+
+        this.selectedLevel = value;
     }
 
     get level() {
-        return this.selectedLevel;
+        return Level.levelMap[this.selectedLevel];
+    }
+
+    save() {
+        GameStorage.setItem('level', this.selectedLevel);
     }
 
     notify() {
-        dispatch(EVENTS.LEVEL_SELECTED, {level: this.selectedLevel});
+        dispatch(EVENTS.LEVEL_LOADED, {level: this.selectedLevel});
     }
 }
