@@ -4,7 +4,6 @@ export const EVENTS = {
     GAME_NEW: 'new-game',
     GAME_RESET: 'state-reset',
     GAME_START: 'start-game',
-    LEVEL_RESET: 'reset-level',
     LEVEL_SELECT: 'level-select',
     LEVEL_LOADED: 'level-loaded',
     SCORE_RELOAD: 'score-reload',
@@ -33,10 +32,14 @@ export const EVENTS = {
     RENDER_TOTAL_SCORE: 'render-total-score',
     RENDER_LEVEL: 'render-level',
     RENDER_SCORES: 'render-scores',
-
+    LOADING: 'loading',
+    LOADING_DONE: 'loading-done',
+    GAME_CONNECTED: 'game-connected',
+    PLAYER_JOINED: 'player-joined',
+    LEVEL_SELECT_DOM: 'level-select-dom'
 };
 export function dispatch(eventName, eventData) {
-    console.log('Fired event: ' + eventName, eventData);
+    console.info('Fired event: ' + eventName, eventData);
     let event = new CustomEvent(eventName, { detail: eventData });
     $('app').dispatchEvent(event);
 }

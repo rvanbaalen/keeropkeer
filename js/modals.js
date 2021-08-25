@@ -2,6 +2,7 @@ import {$, forEachQuery, randomString} from "./utilities.js";
 import language from "../lang/default.js";
 import { renderTemplate } from "./rendering.js";
 import {dispatch, EVENTS, listen} from "./events.js";
+import socket from "./socket";
 
 export function registerModalEvents() {
     listen(EVENTS.MODAL_TOGGLE, event => {
@@ -24,14 +25,22 @@ export function registerModalEvents() {
     });
 }
 
-export function createLevelSelectModal() {
+export function createLevelSelectModal({modalId, Player, Lobby}) {
     // Create new modal and add it to the DOM
     createNewModal({
-        id: 'selectLevelModal',
-        visible: true,
+        id: modalId,
+        visible: false,
         message: false,
         body: `
                 <div class="new-game-container">
+                    <div class="lobby-container">
+                        <ul>
+                            <li id="playerNameWrap">Player: <span id="playerName">${Player.name}</span></li>
+                            <li id="lobbyWrap">Game code: <span id="lobbyCode">${Lobby.code}</span></li>
+                            <li id="playersJoinedWrap">Players joined (<span id="playerTotal">${Lobby.players.length}</span>): <span id="playerNames">${Lobby.playerNames}</span></li>
+                            <li id="startGameWrap"><button id="start">Start game</button></li>
+                        </ul>
+                    </div>
                     <div class="level-image-container">
                         <a href="#">
                             <span>Level 1</span>
@@ -50,9 +59,6 @@ export function createLevelSelectModal() {
                             <img src="/images/level4.png" alt="Level 4" class="level-image" id="level4">
                         </a>
                     </div>
-                    <div class="lobby-container">
-                        <label for="lobbyKey">Create/join lobby:</label><input maxlength="6" type="text" id="lobbyKey" placeholder="6 letters" required /><button id="randomizeLobby">Random</button><button id="start">Start</button>
-                    </div>
                 </div>
             `,
         buttons: false
@@ -62,32 +68,20 @@ export function createLevelSelectModal() {
     forEachQuery('.level-image-container a', level => {
         level.addEventListener('click', (event) => {
             event.preventDefault();
-            forEachQuery('.level-image-container a', level => {
-                level.classList.remove('selected');
-            });
-            event.target.parentElement.classList.add('selected');
             selectedLevel = event.target.id;
+            dispatch(EVENTS.LEVEL_SELECT_DOM, {level: selectedLevel, element: event.target});
+            socket.emit('level:select', {selectedLevel});
         }, false);
     });
 
-    $('lobbyKey').addEventListener('keyup', (event) => {
-        event.target.value = event.target.value.toUpperCase().trim();
-    }, false);
-
     $('start').addEventListener('click',(event) => {
         event.preventDefault();
-        if (selectedLevel === false) {
+        if ($('app').querySelectorAll('.level-image-container a.selected').length === 0) {
             alert(language.notification.selectLevel);
             return false;
         }
 
-        dispatch(EVENTS.LEVEL_SELECT, {selectedLevel});
-        dispatch(EVENTS.LOBBY_JOIN, {lobbyId: $('lobbyKey').value});
-    }, false);
-
-    $('randomizeLobby').addEventListener('click',(event) => {
-        event.preventDefault();
-        $('lobbyKey').value = randomString(6).toUpperCase();
+        dispatch(EVENTS.GAME_START);
     }, false);
 }
 
@@ -137,7 +131,7 @@ export function createNewModal(options) {
         </div>
     `;
 
-    let modal = renderTemplate(modalTemplate, opts);
+    let modal = renderTemplate(modalTemplate);
     if (opts.buttons.cancel && typeof opts.buttons.cancel.callback === 'function') {
         modal.querySelector('#' + opts.buttons.cancel.id).addEventListener('click', opts.buttons.cancel.callback, false);
     }
@@ -150,8 +144,7 @@ export function createNewModal(options) {
     return modal;
 }
 
-export function createNewGameModal() {
-    const modalId = 'newGameModal';
+export function createNewGameModal({modalId = 'newGameModal'}) {
     return createNewModal({
         id: modalId,
         message: language.modal.newGame.body,

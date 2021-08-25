@@ -3,7 +3,7 @@ function $(id) {
 }
 
 function randomString(length = 6) {
-    return Math.random().toString(16).substr(-length);
+    return Math.random().toString(36).replace(/[^a-z]+/g, '').substr(0, length);
 }
 
 function forEachQuery(query, callback) {
@@ -75,8 +75,18 @@ var nl = {
         landscapeMode: 'Draai het scherm horizontaal om te beginnen.',
         selectLevel: 'Selecteer een level.',
         playerName: 'Wat is je naam?',
-        creatingLobby: 'Bezig met het aanmaken van de lobby...'
-    }
+        createLobby: 'Kies een spelcode:',
+        creatingLobby: 'Bezig met het aanmaken van de lobby...',
+        playerJoined: {
+            title: 'Een speler is verbonden',
+            message(username = 'onbekend') { return `${username} speelt mee!`; }
+        },
+        playerDisconnected: {
+            title: 'Verbinding met speler verbroken',
+            message(username = 'onbekend') { return `${username} is niet meer verbonden.`; }
+        }
+    },
+    lobbyStats(code, players) { return ` er ${players > 1 ? 'zijn' : 'is'} ${players} speler${players > 1 ? 's' : ''} in lobby '${code}'` }
 };
 
 let lang = 'nl';
@@ -97,7 +107,6 @@ const EVENTS = {
     GAME_NEW: 'new-game',
     GAME_RESET: 'state-reset',
     GAME_START: 'start-game',
-    LEVEL_RESET: 'reset-level',
     LEVEL_SELECT: 'level-select',
     LEVEL_LOADED: 'level-loaded',
     SCORE_RELOAD: 'score-reload',
@@ -126,10 +135,14 @@ const EVENTS = {
     RENDER_TOTAL_SCORE: 'render-total-score',
     RENDER_LEVEL: 'render-level',
     RENDER_SCORES: 'render-scores',
-
+    LOADING: 'loading',
+    LOADING_DONE: 'loading-done',
+    GAME_CONNECTED: 'game-connected',
+    PLAYER_JOINED: 'player-joined',
+    LEVEL_SELECT_DOM: 'level-select-dom'
 };
 function dispatch$1(eventName, eventData) {
-    console.log('Fired event: ' + eventName, eventData);
+    console.info('Fired event: ' + eventName, eventData);
     let event = new CustomEvent(eventName, { detail: eventData });
     $('app').dispatchEvent(event);
 }
@@ -141,6 +154,17 @@ function listen(eventName, callback) {
 window.EVENTS = EVENTS;
 window.dispatch = dispatch$1;
 window.listen = listen;
+
+// export const SOCKET_SERVER = 'https://dry-peak-80209.herokuapp.com/';
+const SOCKET_SERVER = 'http://192.168.1.111:3000/';
+
+const io = window.io;
+const socket = io(SOCKET_SERVER, { autoConnect: false });
+localStorage.setItem('debug', 'socket.io-client:socket');
+
+socket.onAny((event, ...args) => {
+    console.log(event, args);
+});
 
 function registerModalEvents() {
     listen(EVENTS.MODAL_TOGGLE, event => {
@@ -163,14 +187,22 @@ function registerModalEvents() {
     });
 }
 
-function createLevelSelectModal() {
+function createLevelSelectModal({modalId, Player, Lobby}) {
     // Create new modal and add it to the DOM
     createNewModal({
-        id: 'selectLevelModal',
-        visible: true,
+        id: modalId,
+        visible: false,
         message: false,
         body: `
                 <div class="new-game-container">
+                    <div class="lobby-container">
+                        <ul>
+                            <li id="playerNameWrap">Player: <span id="playerName">${Player.name}</span></li>
+                            <li id="lobbyWrap">Game code: <span id="lobbyCode">${Lobby.code}</span></li>
+                            <li id="playersJoinedWrap">Players joined (<span id="playerTotal">${Lobby.players.length}</span>): <span id="playerNames">${Lobby.playerNames}</span></li>
+                            <li id="startGameWrap"><button id="start">Start game</button></li>
+                        </ul>
+                    </div>
                     <div class="level-image-container">
                         <a href="#">
                             <span>Level 1</span>
@@ -189,9 +221,6 @@ function createLevelSelectModal() {
                             <img src="/images/level4.png" alt="Level 4" class="level-image" id="level4">
                         </a>
                     </div>
-                    <div class="lobby-container">
-                        <label for="lobbyKey">Create/join lobby:</label><input maxlength="6" type="text" id="lobbyKey" placeholder="6 letters" required /><button id="randomizeLobby">Random</button><button id="start">Start</button>
-                    </div>
                 </div>
             `,
         buttons: false
@@ -201,32 +230,20 @@ function createLevelSelectModal() {
     forEachQuery('.level-image-container a', level => {
         level.addEventListener('click', (event) => {
             event.preventDefault();
-            forEachQuery('.level-image-container a', level => {
-                level.classList.remove('selected');
-            });
-            event.target.parentElement.classList.add('selected');
             selectedLevel = event.target.id;
+            dispatch$1(EVENTS.LEVEL_SELECT_DOM, {level: selectedLevel, element: event.target});
+            socket.emit('level:select', {selectedLevel});
         }, false);
     });
 
-    $('lobbyKey').addEventListener('keyup', (event) => {
-        event.target.value = event.target.value.toUpperCase().trim();
-    }, false);
-
     $('start').addEventListener('click',(event) => {
         event.preventDefault();
-        if (selectedLevel === false) {
+        if ($('app').querySelectorAll('.level-image-container a.selected').length === 0) {
             alert(language.notification.selectLevel);
             return false;
         }
 
-        dispatch$1(EVENTS.LEVEL_SELECT, {selectedLevel});
-        dispatch$1(EVENTS.LOBBY_JOIN, {lobbyId: $('lobbyKey').value});
-    }, false);
-
-    $('randomizeLobby').addEventListener('click',(event) => {
-        event.preventDefault();
-        $('lobbyKey').value = randomString(6).toUpperCase();
+        dispatch$1(EVENTS.GAME_START);
     }, false);
 }
 
@@ -289,8 +306,7 @@ function createNewModal(options) {
     return modal;
 }
 
-function createNewGameModal() {
-    const modalId = 'newGameModal';
+function createNewGameModal({modalId = 'newGameModal'}) {
     return createNewModal({
         id: modalId,
         message: language.modal.newGame.body,
@@ -318,66 +334,98 @@ function createNewGameModal() {
     });
 }
 
-const API_BASE = 'https://kokbackend.glitch.me'; // no trailing / !
-
-function fetchConfig(method = 'GET', data = false) {
-    let config = {
-        method,
-        mode: 'cors', // no-cors, *cors, same-origin
-        cache: 'no-cache', // *default, no-cache, reload, force-cache, only-if-cached
-        credentials: 'same-origin', // include, *same-origin, omit
-        headers: {
-            'Content-Type': 'application/json'
-            // 'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        redirect: 'follow', // manual, *follow, error
-        referrerPolicy: 'no-referrer', // no-referrer, *no-referrer-when-downgrade, origin, origin-when-cross-origin, same-origin, strict-origin, strict-origin-when-cross-origin, unsafe-url
-    };
-    if (data !== false) {
-        config.body = JSON.stringify(data); // body data type must match "Content-Type" header
-    }
-
-    return config;
-}
-
-// From https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch
-async function sendData(method = 'POST', path = '', data = {}) {
-    // Default options are marked with *
-    const url = API_BASE + path;
-    const response = await fetch(url, fetchConfig(method, data));
-
-    return response.json(); // parses JSON response into native JavaScript objects
-}
-
-async function postData(path = '', data = {}) {
-    return sendData('POST', path, data);
-}
-
-async function deleteData(path = '') {
-    return sendData('DELETE', path);
-}
-
-async function getData(path = '', data = {}) {
-    const url = API_BASE + path;
-    const response = await fetch(url, fetchConfig());
-
-    return response.json();
-}
-
-class GameStorage {
-    static prefix = 'kok_';
-
+class Notify {
+    static TRANSITION_DELAY = 200;
     constructor() {
 
     }
 
-    load() {
+    static hide(opts) {
+        const {id, timeout = 400} = opts;
+        if (!$(id)) {
+            return;
+        }
 
+        $(id).classList.remove('show');
+        setTimeout(() => {
+            const element = $(id);
+            if (element) {
+                element.remove();
+            }
+        }, timeout);
     }
 
-    new() {
+    static removePrevious() {
+        let activeNotifications = document.querySelectorAll('.notification.show').length;
 
+        if (activeNotifications > 0) {
+            // Get rid of active notifications first
+            let timeout = 200;
+            forEachQuery('.notification.show', notification => {
+                Notify.hide({id: notification.id, timeout});
+                timeout += 200;
+            });
+        }
+
+        return activeNotifications;
     }
+
+    static show(opts) {
+        const delay = Notify.removePrevious();
+        const execute = (opts) => {
+            if (typeof opts === 'string') {
+                opts = {title: opts};
+            }
+
+            let {
+                message,
+                title = 'No message specified.',
+                timeout = 4000,
+                autoHide = false
+            } = opts;
+
+            const notification = Notify.createTemplate(message, title);
+
+            document.body.append(notification);
+            setTimeout(() => {
+                $(notification.id).classList.toggle('show');
+            }, 1);
+
+            if (autoHide) {
+                setTimeout(() => {
+                    Notify.hide({id: notification.id});
+                }, timeout);
+            }
+        };
+
+        if (delay > 0) {
+            setTimeout(() => {
+                execute(opts);
+            }, (delay * 200) + 200);
+        } else {
+            execute(opts);
+        }
+    }
+
+    static createTemplate(message, title = false) {
+        const notificationId = 'notification_' + randomString(5);
+        const template = `
+            <div class="notification" id="${notificationId}">
+                ${title ? `
+                <h2>${title}</h2>
+                ` : ``}
+                ${message ? `
+                <p>${message}</p>
+                ` : ``}
+            </div>
+        `;
+
+        return renderTemplate(template);
+    }
+}
+
+class GameStorage {
+    static prefix = 'kok_';
 
     static removeItem(key) {
         return localStorage.removeItem(GameStorage.prefix + key);
@@ -399,55 +447,101 @@ class GameStorage {
 }
 
 class Lobby {
-    lobby = false;
-    Player;
-    reloading = false;
+    #lobby = false;
+    state = false;
 
-    constructor(Player) {
-        listen(EVENTS.LOBBY_CREATED, (event) => {
-            this.lobby = event.detail.lobby;
-        });
-        listen(EVENTS.LOBBY_JOINED, (event) => {
-            this.lobby = event.detail.lobby;
+    constructor(lobbyData) {
+        this.lobby = lobbyData;
+
+        socket.on('player:stats', ({player}) => {
+            Lobby.setLobbyCodeDom({code: player.lobbyCode});
         });
 
-        this.Player = Player;
+        socket.on('lobby:updated', ({lobby}) => {
+            this.lobby = lobby;
+            Lobby.setLobbyCodeDom({code: this.lobby.code});
+        });
 
-        this.reloading = setInterval(() => {
-            this.reload();
-        }, 1000);
+        socket.once('lobby:joined', ({lobby}) => {
+            this.lobby = lobby;
+        });
+
+        socket.once('lobby:created', ({lobby}) => {
+            this.lobby = lobby;
+        });
     }
 
-    async reload() {
-        // Keep getting data
-    }
+    static async joinOrCreate(lobbyCode) {
+        if (lobbyCode) {
+            // Join lobby
+            socket.emit('lobby:join', {lobbyCode});
+        } else {
+            // Create lobby
+            const lobbyCode = prompt(language.notification.createLobby, randomString(4).toUpperCase());
+            socket.emit('lobby:create', {lobbyCode});
+        }
 
-    async create(key = randomString(6)) {
-        return await postData('/games', Lobby.template(key, this.Player.id))
-            .then(data => this.store(data))
-            .then(data => {
-                dispatch$1(EVENTS.LOBBY_CREATED, {lobby: data});
-                return data;
+        return new Promise((resolve, reject) => {
+            socket.once('lobby:joined', ({lobby}) => {
+                resolve(new Lobby(lobby));
             });
-    }
 
-    store(data) {
-        this.lobby = data;
-        GameStorage.setItem('lobby', data.code);
-
-        return data;
-    }
-
-    async join(key) {
-        return await getData(`/games/${key}`)
-            .then(data => {
-                if (data.length > 0) {
-                    dispatch$1(EVENTS.LOBBY_JOINED, {lobby: data[0]});
-                    return this.store(data[0]);
-                }
-
-                return this.create(key);
+            socket.once('lobby:created', ({lobby}) => {
+                resolve(new Lobby(lobby));
             });
+
+            setTimeout(() => {
+                reject('Lobby creation timeout.');
+            }, 10000);
+        });
+    }
+
+    static setLobbyCodeDom({code}) {
+        const lobbyEl = $('lobbyCode');
+        if (lobbyEl) {
+            lobbyEl.innerText = code;
+        }
+    }
+
+    static setState(state) {
+        socket.emit('lobby:state', {key: 'state', value: state});
+    }
+
+    leave() {
+        socket.emit('lobby:leave', {lobbyCode: this.code});
+    }
+
+    get players() {
+        return this.lobby?.players || [];
+    }
+
+    get code() {
+        return this.lobby?.code;
+    }
+
+    static get cachedLobbyCode() {
+        return GameStorage.getItem('lobby', false);
+    }
+
+    get state() {
+        return this.lobby?.state;
+    }
+
+    set lobby(newLobby) {
+        if (newLobby.code !== this.#lobby.code) {
+            // Store the new value in the local storage as well.
+            GameStorage.setItem('lobby', newLobby.code);
+        }
+
+        this.#lobby = newLobby;
+    }
+
+    get lobby() {
+        return this.#lobby;
+    }
+
+    get playerNames() {
+        return this.players.map(p => p.username).join(', ');
     }
 
     static template(gameKey = '', playerId = -1) {
@@ -456,21 +550,6 @@ class Lobby {
         newLobby.playerId = playerId;
 
         return newLobby;
-    }
-
-    async delete() {
-        GameStorage.removeItem('lobby');
-
-        const lobbyId = this.lobby.code;
-        if (this.lobby.playerId === this.Player.id) {
-            return await deleteData(`/games/${lobbyId}`)
-                .then(() => {
-                    GameStorage.removeItem('lobby');
-                    dispatch$1(EVENTS.LOBBY_DELETED, {lobbyId});
-                });
-        }
-
-        return true;
     }
 }
 
@@ -2573,25 +2652,48 @@ class Level {
         level4
     };
 
-    constructor() {
-        listen(EVENTS.LEVEL_RESET, () => {
-            this.selectedLevel = false;
-        });
+    constructor(Lobby) {
+        if (Lobby.level) {
+            this.level = Lobby.level;
+        }
+
         listen(EVENTS.LEVEL_LOADED, () => {
             dispatch$1(EVENTS.MODAL_HIDE, {modalId: 'selectLevelModal'});
         });
-        listen(EVENTS.LEVEL_SELECT, (event) => {
-            // Level selected via external input
-            const {selectedLevel} = event.detail;
-            this.level = selectedLevel;
-            this.save();
-
-            // Notify the application
-            this.notify();
+        listen(EVENTS.LEVEL_SELECT_DOM, (event) => {
+            const {level, element} = event.detail;
+            Level.selectInDom(level, element);
+        });
+        listen(EVENTS.GAME_START, () => {
+            dispatch$1(EVENTS.MODAL_HIDE, {modalId: 'selectLevelModal'});
         });
 
-        // Level selected via localStorage
-        this.selectedLevel = GameStorage.getItem('level');
+        socket.on('level:selected', ({selectedLevel}) => {
+            dispatch$1(EVENTS.LEVEL_SELECT_DOM, {level: selectedLevel});
+            this.level = selectedLevel;
+        });
+
+        socket.on('lobby:created', ({lobby}) => {
+            dispatch$1(EVENTS.LEVEL_SELECT_DOM, {level: lobby.level});
+            this.level = lobby.level;
+        });
+    }
+
+    static selectInDom(level, element = false) {
+        forEachQuery('.level-image-container a', level => {
+            level.classList.remove('selected');
+        });
+
+        if (level !== '') {
+            if (!element) {
+                element = $(level);
+            }
+            if (!element) {
+                return;
+            }
+
+            element.parentElement.classList.add('selected');
+        }
     }
 
     reset() {
@@ -2599,38 +2701,26 @@ class Level {
         this.selectedLevel = false;
     }
 
-    select() {
-        const levelModalId = 'selectLevelModal';
+    select({Player, Lobby}) {
+        const modalId = 'selectLevelModal';
 
         // Check if modal already exists in the DOM
-        if ($(levelModalId)) {
+        if ($(modalId)) {
             // Show modal
-            dispatch$1(EVENTS.MODAL_SHOW, {modalId: levelModalId});
+            dispatch$1(EVENTS.MODAL_SHOW, {modalId: modalId});
             return;
         }
 
-        createLevelSelectModal();
+        createLevelSelectModal({modalId, Player, Lobby});
+        dispatch$1(EVENTS.MODAL_SHOW, {modalId});
     }
 
     set level(value) {
-        if (value === false) {
-            this.selectedLevel = false;
-            return;
-        }
-
         this.selectedLevel = value;
     }
 
     get level() {
         return Level.levelMap[this.selectedLevel];
-    }
-
-    save() {
-        GameStorage.setItem('level', this.selectedLevel);
-    }
-
-    notify() {
-        dispatch$1(EVENTS.LEVEL_LOADED, {level: this.selectedLevel});
     }
 }
 
@@ -2718,38 +2808,130 @@ class Score {
     }
 }
 
+class Session {
+    constructor() {
+    }
+
+    static get cachedId() {
+        return GameStorage.getItem('sessionId');
+    }
+
+    static set cachedId(newValue) {
+        return GameStorage.setItem('sessionId', newValue);
+    }
+}
+
 class Player {
     #cachedPlayer = false;
+
     constructor() {
-        const localPlayer = GameStorage.getItem('player', false);
-        if (localPlayer !== false) {
-            // A player already exists in the cache.
-            this.#cachedPlayer = localPlayer;
+        const sessionId = Session.cachedId;
+        if (sessionId !== false) {
+            socket.auth = {
+                sessionId,
+                username: Player.cachedName
+            };
+            socket.connect();
         } else {
             // No player exists. Create a new one.
             this.createPlayer();
         }
 
+        socket.once('player:created', ({player}) => {
+            this.player = player;
+        });
+
+        socket.on('player:updated', ({player}) => {
+            this.player = player;
+        });
+
+        socket.on('player:stats', ({totalPlayers, players}) => {
+            Player.setPlayerNamesDom({players});
+            Player.setPlayerTotalDom({totalPlayers});
+        });
+
+        socket.on('player:connected', (player) => {
+            Notify.show({
+                title: language.notification.playerJoined.title,
+                message: language.notification.playerJoined.message(player.username),
+                autoHide: true
+            });
+        });
+
+        socket.on('player:disconnected', ({player}) => {
+            // Notify.show({
+            //     title: language.notification.playerDisconnected.title,
+            //     message: language.notification.playerDisconnected.message(player.username),
+            //     autoHide: true
+            // });
+        });
+
+        // socket.on('connect', () => {
+        //     dispatch(EVENTS.GAME_CONNECTED);
+        // });
+    }
+
+    static setPlayerTotalDom({totalPlayers}) {
+        const totalEl = $('playerTotal');
+        if (totalEl) {
+            totalEl.innerText = totalPlayers;
+        }
+    }
+
+    static setPlayerNamesDom({players}) {
+        const namesEl = $('playerNames');
+        if (namesEl) {
+            namesEl.innerText = players.join(', ');
+        }
+    }
+
+    static setPlayerNameDom({player}) {
+        const playerEl = $('playerName');
+        if (playerEl) {
+            playerEl.innerText = player.username;
+        }
     }
 
     createPlayer() {
-        const name = prompt(language.notification.playerName);
-        this.#cachedPlayer = {
-            name, id: Math.floor(Math.random() * 1000)
-        };
-        GameStorage.setItem('player', this.#cachedPlayer);
+        const username = prompt(language.notification.playerName);
+        this.player = {username};
+        this.connectPlayer(this.player);
+    }
+
+    connectPlayer(player) {
+        console.log('Connecting player!', player);
+        socket.auth = player;
+        socket.connect();
     }
 
     delete() {
-        GameStorage.removeItem('player');
+        return GameStorage.removeItem('player');
+    }
+
+    set player(value) {
+        if (!value.username) {
+            throw new Error('Invalid player object. No username.');
+        }
+
+        this.#cachedPlayer = value;
+        GameStorage.setItem('player', value.username);
+        Player.setPlayerNameDom(value.username);
+    }
+
+    get player() {
+        return this.#cachedPlayer;
+    }
+
+    static get cachedName() {
+        return GameStorage.getItem('player');
     }
 
     get name() {
-        return this.#cachedPlayer.name;
+        return this.#cachedPlayer.username;
     }
 
     get id() {
-        return this.#cachedPlayer.id;
+        return this.#cachedPlayer?.id || randomString(6).toLowerCase();
     }
 }
 
@@ -2757,87 +2939,116 @@ class Game {
     static COLORS = ['green', 'yellow', 'blue', 'red', 'orange'];
     static TOTAL_JOKERS = 8;
 
+    static STATE = {
+        LEVEL_SELECT: 'levelSelect',
+        IN_GAME: 'inGame'
+    };
+
     Lobby;
     Level;
     Score;
     Player;
-    State;
 
     #cachedState = false;
-    constructor(offline = false) {
-        this.Level = new Level();
-        this.Score = new Score();
+    constructor() {
+        // Create player and connect to socket
         this.Player = new Player();
-        this.State = new GameStorage();
 
+        this.registerHandlers();
+
+        socket.on('connect', () => {
+            console.clear();
+            this.initialize();
+        });
+    }
+
+    initialize() {
+        /*
+        Do we have a local state?
+        - Yes
+        --- Load the current level
+        --- Load the current state
+        --- Continue where we left off
+        - No
+        --- Display level selector
+        --- Let user set sync game optionally
+         */
+
+        // Create new Lobby first
+        Lobby.joinOrCreate(Lobby.cachedLobbyCode)
+            .then(LobbyInstance => {
+                this.Lobby = LobbyInstance;
+                // Select new level
+                this.Level = new Level(LobbyInstance);
+                this.Score = new Score();
+
+                this.start();
+            })
+            .catch(err => {
+                console.error('Failed to create lobby', err);
+            });
+    }
+
+    registerHandlers() {
+        listen(EVENTS.GAME_NEW, () => {
+            this.resetState();
+            Lobby.setState(Game.STATE.LEVEL_SELECT);
+        });
         listen(EVENTS.GAME_RESET, () => {
             // Game is reset, start a new one.
             dispatch$1(EVENTS.GAME_START);
         });
-
-        const self = this;
-        listen(EVENTS.GAME_NEW, () => {
-            self.resetState();
-        });
         listen(EVENTS.GAME_START, () => {
+            console.log('Broadcasting GAME START to SOCKET');
+            socket.emit('game:start');
+        });
+
+        socket.on('game:start', () => {
+            console.log('RECEIVED GAME START FROM SERVER');
             this.start();
         });
-        listen(EVENTS.LOBBY_JOIN, (event) => {
-            const {lobbyId} = event.detail;
-            // Join a new lobby
-            this.Lobby = new Lobby(this.Player);
-            this.Lobby.join(lobbyId).then((lobby) => {
-                dispatch$1(EVENTS.LOBBY_READY, {lobby});
-            });
+
+        socket.on('level:selected', () => {
+            this.state = this.createState();
         });
 
-        if (offline) {
-            listen(EVENTS.LEVEL_LOADED, () => {
-                console.log('creating offline state');
-                this.state = this.createState();
-                dispatch$1(EVENTS.RENDER_LEVEL);
-            });
-        } else {
-            listen(EVENTS.LOBBY_READY, () => {
-                console.log('creating state');
-                this.state = this.createState();
-                dispatch$1(EVENTS.RENDER_LEVEL);
-            });
-        }
-
-        console.log('New Game', this);
+        socket.on('lobby:updated', ({lobby}) => {
+            switch (lobby.state) {
+                case 'levelSelect':
+                    this.Level.select({Player: this.Player, Lobby: this.Lobby});
+                    break;
+                case 'inGame':
+                    this.load();
+                    break;
+            }
+        });
     }
 
     start() {
-        if (this.state === false) {
-            console.log('no state');
-            // New Game
-            this.Level.select();
+        if (!this.state) {
+            this.Level.select({Player: this.Player, Lobby: this.Lobby});
         } else {
-            console.log('load state');
-            // Load game
-            this.loadGame();
+            // Load state
+            this.load();
+            Lobby.setState('inGame');
         }
     }
 
-    loadGame() {
-        this.Lobby = new Lobby(this.Player);
-        this.Lobby.join(GameStorage.getItem('lobby')).then(() => {
-            dispatch$1(EVENTS.RENDER_LEVEL);
-        });
+    load() {
+        dispatch$1(EVENTS.MODAL_HIDE, {modalId: 'selectLevelModal'});
+        dispatch$1(EVENTS.RENDER_LEVEL);
     }
 
     resetState() {
         this.Level.reset();
-        this.Lobby.delete();
-        GameStorage.removeItem('state');
-        this.#cachedState = false;
+        this.state = false;
 
         dispatch$1(EVENTS.GAME_RESET);
     }
 
     createState() {
         const self = this;
+        console.log('SETTING STATE LEVEL', self.Level.level);
         let state = {
             grid: self.Level.level,
             jokers: [],
@@ -2866,16 +3077,20 @@ class Game {
     get state() {
         // If there is no locally cached state value, try to load one from the
         // localStorage and return false if none exist.
-        if (this.#cachedState === false) {
-            return GameStorage.getItem('state', false);
+        if (!this.#cachedState) {
+            this.#cachedState = GameStorage.getItem('state', false);
         }
 
         return this.#cachedState;
     }
 
     set state(value) {
-        GameStorage.setItem('state', value);
         this.#cachedState = value;
+        if (!value) {
+            GameStorage.removeItem('state');
+        } else {
+            GameStorage.setItem('state', value);
+        }
     }
 
     updateState(column, index, key, value, type = 'grid') {
@@ -2944,7 +3159,8 @@ class Game {
 }
 
 class Engine {
-    currentGame = false
+    currentGame = false;
+    version;
     constructor() {
         registerModalEvents();
 
@@ -2952,6 +3168,9 @@ class Engine {
         this.parseOrientationOverlay();
         this.parseGenericLoading();
 
+        listen(EVENTS.LOADING, () => {
+            dispatch$1(EVENTS.MODAL_SHOW, {modalId: 'genericLoading'});
+        });
         listen(EVENTS.RENDER_LEVEL, () => {
             this.render();
         });
@@ -2974,7 +3193,17 @@ class Engine {
             }
         });
 
-        dispatch$1(EVENTS.GAME_START);
+        socket.on('version', version => {
+            GameStorage.setItem('version', version);
+        });
+
+        socket.on('session', ({sessionId}) => {
+            Session.cachedId = sessionId;
+        });
+
+        socket.on('disconnect', () => {
+            // Nothing yet?
+        });
     }
 
     renderBonusScore(value) {
@@ -3201,10 +3430,11 @@ class Engine {
         this.parseGrid(state);
         this.parseTotalScores();
 
-        let newGameModal = createNewGameModal();
+        const modalId = 'newGameModal';
+        createNewGameModal({modalId});
         this.renderNewGameButton((event) => {
             event.preventDefault();
-            dispatch$1(EVENTS.MODAL_TOGGLE, {modalId: newGameModal.id});
+            dispatch$1(EVENTS.MODAL_SHOW, {modalId});
         });
 
         dispatch$1(EVENTS.SCORE_RELOAD);
@@ -3259,4 +3489,10 @@ class Engine {
     }
 }
 
-window.kok = new Engine();
+try {
+    new Engine();
+} catch (err) {
+    console.error('Failed to load game. Reset state!', err);
+}
+
+window.socket = socket;

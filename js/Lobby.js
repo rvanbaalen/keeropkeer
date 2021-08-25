@@ -1,58 +1,105 @@
-import {deleteData, getData, postData} from "./client.js";
-import {randomString} from "./utilities.js";
-import {dispatch, EVENTS, listen} from "./events.js";
-import {GameStorage} from "./GameStorage.js";
+import socket from "./socket";
+import {Notify} from "./Notify";
+import language from "../lang/default";
+import {GameStorage} from "./GameStorage";
+import {$, randomString} from "./utilities";
 
 export class Lobby {
-    lobby = false;
-    Player;
-    reloading = false;
+    #lobby = false;
+    state = false;
 
-    constructor(Player) {
-        listen(EVENTS.LOBBY_CREATED, (event) => {
-            this.lobby = event.detail.lobby;
-        });
-        listen(EVENTS.LOBBY_JOINED, (event) => {
-            this.lobby = event.detail.lobby;
+    constructor(lobbyData) {
+        this.lobby = lobbyData;
+
+        socket.on('player:stats', ({player}) => {
+            Lobby.setLobbyCodeDom({code: player.lobbyCode});
         });
 
-        this.Player = Player;
+        socket.on('lobby:updated', ({lobby}) => {
+            this.lobby = lobby;
+            Lobby.setLobbyCodeDom({code: this.lobby.code});
+        });
 
-        this.reloading = setInterval(() => {
-            this.reload();
-        }, 1000);
+        socket.once('lobby:joined', ({lobby}) => {
+            this.lobby = lobby;
+        });
+
+        socket.once('lobby:created', ({lobby}) => {
+            this.lobby = lobby;
+        });
     }
 
-    async reload() {
-        // Keep getting data
-    }
+    static async joinOrCreate(lobbyCode) {
+        if (lobbyCode) {
+            // Join lobby
+            socket.emit('lobby:join', {lobbyCode});
+        } else {
+            // Create lobby
+            const lobbyCode = prompt(language.notification.createLobby, randomString(4).toUpperCase());
+            socket.emit('lobby:create', {lobbyCode});
+        }
 
-    async create(key = randomString(6)) {
-        return await postData('/games', Lobby.template(key, this.Player.id))
-            .then(data => this.store(data))
-            .then(data => {
-                dispatch(EVENTS.LOBBY_CREATED, {lobby: data});
-                return data;
+        return new Promise((resolve, reject) => {
+            socket.once('lobby:joined', ({lobby}) => {
+                resolve(new Lobby(lobby));
             });
-    }
 
-    store(data) {
-        this.lobby = data;
-        GameStorage.setItem('lobby', data.code);
-
-        return data;
-    }
-
-    async join(key) {
-        return await getData(`/games/${key}`)
-            .then(data => {
-                if (data.length > 0) {
-                    dispatch(EVENTS.LOBBY_JOINED, {lobby: data[0]});
-                    return this.store(data[0]);
-                }
-
-                return this.create(key);
+            socket.once('lobby:created', ({lobby}) => {
+                resolve(new Lobby(lobby));
             });
+
+            setTimeout(() => {
+                reject('Lobby creation timeout.');
+            }, 10000);
+        });
+    }
+
+    static setLobbyCodeDom({code}) {
+        const lobbyEl = $('lobbyCode');
+        if (lobbyEl) {
+            lobbyEl.innerText = code;
+        }
+    }
+
+    static setState(state) {
+        socket.emit('lobby:state', {key: 'state', value: state})
+    }
+
+    leave() {
+        socket.emit('lobby:leave', {lobbyCode: this.code});
+    }
+
+    get players() {
+        return this.lobby?.players || [];
+    }
+
+    get code() {
+        return this.lobby?.code;
+    }
+
+    static get cachedLobbyCode() {
+        return GameStorage.getItem('lobby', false);
+    }
+
+    get state() {
+        return this.lobby?.state;
+    }
+
+    set lobby(newLobby) {
+        if (newLobby.code !== this.#lobby.code) {
+            // Store the new value in the local storage as well.
+            GameStorage.setItem('lobby', newLobby.code);
+        }
+
+        this.#lobby = newLobby;
+    }
+
+    get lobby() {
+        return this.#lobby;
+    }
+
+    get playerNames() {
+        return this.players.map(p => p.username).join(', ');
     }
 
     static template(gameKey = '', playerId = -1) {
@@ -61,21 +108,6 @@ export class Lobby {
         newLobby.playerId = playerId;
 
         return newLobby;
-    }
-
-    async delete() {
-        GameStorage.removeItem('lobby');
-
-        const lobbyId = this.lobby.code;
-        if (this.lobby.playerId === this.Player.id) {
-            return await deleteData(`/games/${lobbyId}`)
-                .then(() => {
-                    GameStorage.removeItem('lobby');
-                    dispatch(EVENTS.LOBBY_DELETED, {lobbyId});
-                });
-        }
-
-        return true;
     }
 }
 

@@ -1,7 +1,8 @@
 import {dispatch, EVENTS, listen} from "./events.js";
 import {createLevelSelectModal} from "./modals.js";
-import {$} from "./utilities.js";
+import {$, forEachQuery} from "./utilities.js";
 import {GameStorage} from "./GameStorage.js";
+import socket from "./socket.js";
 
 const level1 = [
     {
@@ -2061,25 +2062,48 @@ export class Level {
         level4
     };
 
-    constructor() {
-        listen(EVENTS.LEVEL_RESET, () => {
-            this.selectedLevel = false;
-        });
+    constructor(Lobby) {
+        if (Lobby.level) {
+            this.level = Lobby.level;
+        }
+
         listen(EVENTS.LEVEL_LOADED, () => {
             dispatch(EVENTS.MODAL_HIDE, {modalId: 'selectLevelModal'});
         });
-        listen(EVENTS.LEVEL_SELECT, (event) => {
-            // Level selected via external input
-            const {selectedLevel} = event.detail;
-            this.level = selectedLevel;
-            this.save();
+        listen(EVENTS.LEVEL_SELECT_DOM, (event) => {
+            const {level, element} = event.detail;
+            Level.selectInDom(level, element);
+        });
+        listen(EVENTS.GAME_START, () => {
+            dispatch(EVENTS.MODAL_HIDE, {modalId: 'selectLevelModal'});
+        })
 
-            // Notify the application
-            this.notify();
+        socket.on('level:selected', ({selectedLevel}) => {
+            dispatch(EVENTS.LEVEL_SELECT_DOM, {level: selectedLevel});
+            this.level = selectedLevel;
         });
 
-        // Level selected via localStorage
-        this.selectedLevel = GameStorage.getItem('level');
+        socket.on('lobby:created', ({lobby}) => {
+            dispatch(EVENTS.LEVEL_SELECT_DOM, {level: lobby.level});
+            this.level = lobby.level;
+        });
+    }
+
+    static selectInDom(level, element = false) {
+        forEachQuery('.level-image-container a', level => {
+            level.classList.remove('selected');
+        });
+
+        if (level !== '') {
+            if (!element) {
+                element = $(level);
+            }
+            if (!element) {
+                return;
+            }
+
+            element.parentElement.classList.add('selected');
+        }
     }
 
     reset() {
@@ -2087,37 +2111,25 @@ export class Level {
         this.selectedLevel = false;
     }
 
-    select() {
-        const levelModalId = 'selectLevelModal';
+    select({Player, Lobby}) {
+        const modalId = 'selectLevelModal';
 
         // Check if modal already exists in the DOM
-        if ($(levelModalId)) {
+        if ($(modalId)) {
             // Show modal
-            dispatch(EVENTS.MODAL_SHOW, {modalId: levelModalId});
+            dispatch(EVENTS.MODAL_SHOW, {modalId: modalId});
             return;
         }
 
-        createLevelSelectModal();
+        createLevelSelectModal({modalId, Player, Lobby});
+        dispatch(EVENTS.MODAL_SHOW, {modalId});
     }
 
     set level(value) {
-        if (value === false) {
-            this.selectedLevel = false;
-            return;
-        }
-
         this.selectedLevel = value;
     }
 
     get level() {
         return Level.levelMap[this.selectedLevel];
-    }
-
-    save() {
-        GameStorage.setItem('level', this.selectedLevel);
-    }
-
-    notify() {
-        dispatch(EVENTS.LEVEL_LOADED, {level: this.selectedLevel});
     }
 }

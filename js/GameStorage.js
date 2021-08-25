@@ -1,18 +1,6 @@
 export class GameStorage {
     static prefix = 'kok_';
 
-    constructor() {
-
-    }
-
-    load() {
-
-    }
-
-    new() {
-
-    }
-
     static removeItem(key) {
         return localStorage.removeItem(GameStorage.prefix + key);
     }

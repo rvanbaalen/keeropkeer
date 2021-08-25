@@ -4,9 +4,12 @@
   "description": "Scoreblok",
   "main": "index.html",
   "dependencies": {
-    "rollup": "^2.56.2"
+    "rollup": "^2.56.2",
+    "socket.io-client": "^4.1.3"
   },
   "devDependencies": {
+    "@rollup/plugin-node-resolve": "^13.0.4",
+    "rollup-plugin-serve": "^1.1.0",
     "rollup-plugin-terser": "^7.0.2"
   },
   "scripts": {

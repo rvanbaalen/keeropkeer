@@ -1,4 +1,6 @@
 import {terser} from "rollup-plugin-terser";
+import serve from "rollup-plugin-serve";
+import nodeResolve from "@rollup/plugin-node-resolve";
 
 /**
  * @type {import('rollup').RollupOptions}
@@ -14,7 +16,16 @@ const config = {
             plugins: [terser()]
         }
     ],
-    inlineDynamicImports: true
+    inlineDynamicImports: true,
+    plugins: [
+        serve({
+            open: true,
+            port: 10001,
+        }),
+        nodeResolve({
+            browser: true
+        })
+    ]
 };
 
 export default config;

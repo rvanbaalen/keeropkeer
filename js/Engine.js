@@ -4,9 +4,13 @@ import {createNewGameModal, createNewModal, registerModalEvents} from "./modals.
 import {dispatch, EVENTS, listen} from "./events.js";
 import {Game} from "./Game.js";
 import language from "../lang/default.js";
+import socket from "./socket";
+import {GameStorage} from "./GameStorage";
+import {Session} from "./Session";
 
 export class Engine {
-    currentGame = false
+    currentGame = false;
+    version;
     constructor() {
         registerModalEvents();
 
@@ -14,6 +18,9 @@ export class Engine {
         this.parseOrientationOverlay();
         this.parseGenericLoading();
 
+        listen(EVENTS.LOADING, () => {
+            dispatch(EVENTS.MODAL_SHOW, {modalId: 'genericLoading'});
+        });
         listen(EVENTS.RENDER_LEVEL, () => {
             this.render();
         });
@@ -36,7 +43,17 @@ export class Engine {
             }
         });
 
-        dispatch(EVENTS.GAME_START);
+        socket.on('version', version => {
+            GameStorage.setItem('version', version);
+        });
+
+        socket.on('session', ({sessionId}) => {
+            Session.cachedId = sessionId;
+        });
+
+        socket.on('disconnect', () => {
+            // Nothing yet?
+        });
     }
 
     renderBonusScore(value) {
@@ -263,10 +280,11 @@ export class Engine {
         this.parseGrid(state);
         this.parseTotalScores();
 
-        let newGameModal = createNewGameModal();
+        const modalId = 'newGameModal';
+        createNewGameModal({modalId});
         this.renderNewGameButton((event) => {
             event.preventDefault()
-            dispatch(EVENTS.MODAL_TOGGLE, {modalId: newGameModal.id});
+            dispatch(EVENTS.MODAL_SHOW, {modalId});
         });
 
         dispatch(EVENTS.SCORE_RELOAD);
