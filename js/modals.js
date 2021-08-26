@@ -1,7 +1,7 @@
 import {$, forEachQuery, randomString} from "./utilities.js";
 import language from "../lang/default.js";
 import { renderTemplate } from "./rendering.js";
-import {dispatch, EVENTS, listen} from "./events.js";
+import {dispatch, EVENTS, listen, listenOnce} from "./events.js";
 import socket from "./socket";
 
 export function registerModalEvents() {
@@ -25,8 +25,10 @@ export function registerModalEvents() {
     });
 }
 
-export function createLevelSelectModal({modalId, Player, Lobby}) {
+export function createLevelSelectModal({modalId, Player, Lobby, Level}) {
     // Create new modal and add it to the DOM
+    let {selectedLevel} = Level;
+
     createNewModal({
         id: modalId,
         visible: false,
@@ -64,13 +66,19 @@ export function createLevelSelectModal({modalId, Player, Lobby}) {
         buttons: false
     });
 
-    let selectedLevel = false;
+    listenOnce(EVENTS.MODAL_SHOW, (event) => {
+        if (modalId === event.detail.modalId && selectedLevel) {
+            dispatch(EVENTS.LEVEL_SELECT_DOM, {level: selectedLevel});
+        }
+    })
+
     forEachQuery('.level-image-container a', level => {
         level.addEventListener('click', (event) => {
             event.preventDefault();
             selectedLevel = event.target.id;
             dispatch(EVENTS.LEVEL_SELECT_DOM, {level: selectedLevel, element: event.target});
             socket.emit('level:select', {selectedLevel});
+
         }, false);
     });
 

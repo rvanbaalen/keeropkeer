@@ -1,9 +1,11 @@
 import { $ } from './utilities.js';
 
 export const EVENTS = {
-    GAME_NEW: 'new-game',
-    GAME_RESET: 'state-reset',
-    GAME_START: 'start-game',
+    GAME_CONNECTED: 'game-connected',
+    GAME_NEW: 'game-new',
+    GAME_START: 'game-start',
+    GAME_CONTINUE: 'game-continue',
+    GAME_CREATE_STATE: 'game-create-state',
     LEVEL_SELECT: 'level-select',
     LEVEL_LOADED: 'level-loaded',
     SCORE_RELOAD: 'score-reload',
@@ -34,18 +36,35 @@ export const EVENTS = {
     RENDER_SCORES: 'render-scores',
     LOADING: 'loading',
     LOADING_DONE: 'loading-done',
-    GAME_CONNECTED: 'game-connected',
     PLAYER_JOINED: 'player-joined',
-    LEVEL_SELECT_DOM: 'level-select-dom'
+    LEVEL_SELECT_DOM: 'level-select-dom',
+
 };
+
+const app = $('app');
+const register = {};
+
 export function dispatch(eventName, eventData) {
     console.info('Fired event: ' + eventName, eventData);
     let event = new CustomEvent(eventName, { detail: eventData });
-    $('app').dispatchEvent(event);
+    app.dispatchEvent(event);
+
+    if (register[eventName]?.once) {
+        console.log('remove listener for ', eventName);
+        app.removeEventListener(eventName, register[eventName].callback, false);
+    }
 }
-export function listen(eventName, callback) {
-    $('app').addEventListener(eventName, callback, false);
+export function listen(eventName, callback, once = false) {
+    app.addEventListener(eventName, callback, false);
+
+    if (once) {
+        register[eventName] = {once: true, callback};
+    }
 }
+export function listenOnce(eventName, callback) {
+    return listen(eventName, callback, true);
+}
+
 
 // Debugging purposes.
 window.EVENTS = EVENTS;

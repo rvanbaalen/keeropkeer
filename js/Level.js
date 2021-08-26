@@ -2062,11 +2062,12 @@ export class Level {
         level4
     };
 
-    constructor(Lobby) {
-        if (Lobby.level) {
-            this.level = Lobby.level;
+    constructor() {
+        const level = GameStorage.getItem('state');
+        console.log('got from state', level?.grid);
+        if (level?.grid) {
+            console.log('WEVE GOT A PRESELECTED LEVEL');
         }
-
         listen(EVENTS.LEVEL_LOADED, () => {
             dispatch(EVENTS.MODAL_HIDE, {modalId: 'selectLevelModal'});
         });
@@ -2079,13 +2080,8 @@ export class Level {
         })
 
         socket.on('level:selected', ({selectedLevel}) => {
-            dispatch(EVENTS.LEVEL_SELECT_DOM, {level: selectedLevel});
             this.level = selectedLevel;
-        });
-
-        socket.on('lobby:created', ({lobby}) => {
-            dispatch(EVENTS.LEVEL_SELECT_DOM, {level: lobby.level});
-            this.level = lobby.level;
+            dispatch(EVENTS.GAME_CREATE_STATE);
         });
     }
 
@@ -2121,12 +2117,13 @@ export class Level {
             return;
         }
 
-        createLevelSelectModal({modalId, Player, Lobby});
+        createLevelSelectModal({modalId, Player, Lobby, Level: this});
         dispatch(EVENTS.MODAL_SHOW, {modalId});
     }
 
-    set level(value) {
-        this.selectedLevel = value;
+    set level(level) {
+        this.selectedLevel = level;
+        dispatch(EVENTS.LEVEL_SELECT_DOM, {level});
     }
 
     get level() {

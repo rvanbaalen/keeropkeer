@@ -104,9 +104,11 @@ document.querySelector('body').classList.add('lang-' + lang);
 const language = nl;
 
 const EVENTS = {
-    GAME_NEW: 'new-game',
-    GAME_RESET: 'state-reset',
-    GAME_START: 'start-game',
+    GAME_CONNECTED: 'game-connected',
+    GAME_NEW: 'game-new',
+    GAME_START: 'game-start',
+    GAME_CONTINUE: 'game-continue',
+    GAME_CREATE_STATE: 'game-create-state',
     LEVEL_SELECT: 'level-select',
     LEVEL_LOADED: 'level-loaded',
     SCORE_RELOAD: 'score-reload',
@@ -137,18 +139,35 @@ const EVENTS = {
     RENDER_SCORES: 'render-scores',
     LOADING: 'loading',
     LOADING_DONE: 'loading-done',
-    GAME_CONNECTED: 'game-connected',
     PLAYER_JOINED: 'player-joined',
-    LEVEL_SELECT_DOM: 'level-select-dom'
+    LEVEL_SELECT_DOM: 'level-select-dom',
+
 };
+
+const app = $('app');
+const register = {};
+
 function dispatch$1(eventName, eventData) {
     console.info('Fired event: ' + eventName, eventData);
     let event = new CustomEvent(eventName, { detail: eventData });
-    $('app').dispatchEvent(event);
+    app.dispatchEvent(event);
+
+    if (register[eventName]?.once) {
+        console.log('remove listener for ', eventName);
+        app.removeEventListener(eventName, register[eventName].callback, false);
+    }
 }
-function listen(eventName, callback) {
-    $('app').addEventListener(eventName, callback, false);
+function listen(eventName, callback, once = false) {
+    app.addEventListener(eventName, callback, false);
+
+    if (once) {
+        register[eventName] = {once: true, callback};
+    }
 }
+function listenOnce(eventName, callback) {
+    return listen(eventName, callback, true);
+}
+
 
 // Debugging purposes.
 window.EVENTS = EVENTS;
@@ -187,8 +206,10 @@ function registerModalEvents() {
     });
 }
 
-function createLevelSelectModal({modalId, Player, Lobby}) {
+function createLevelSelectModal({modalId, Player, Lobby, Level}) {
     // Create new modal and add it to the DOM
+    let {selectedLevel} = Level;
+
     createNewModal({
         id: modalId,
         visible: false,
@@ -226,13 +247,19 @@ function createLevelSelectModal({modalId, Player, Lobby}) {
         buttons: false
     });
 
-    let selectedLevel = false;
+    listenOnce(EVENTS.MODAL_SHOW, (event) => {
+        if (modalId === event.detail.modalId && selectedLevel) {
+            dispatch$1(EVENTS.LEVEL_SELECT_DOM, {level: selectedLevel});
+        }
+    });
+
     forEachQuery('.level-image-container a', level => {
         level.addEventListener('click', (event) => {
             event.preventDefault();
             selectedLevel = event.target.id;
             dispatch$1(EVENTS.LEVEL_SELECT_DOM, {level: selectedLevel, element: event.target});
             socket.emit('level:select', {selectedLevel});
+
         }, false);
     });
 
@@ -2652,11 +2679,12 @@ class Level {
         level4
     };
 
-    constructor(Lobby) {
-        if (Lobby.level) {
-            this.level = Lobby.level;
+    constructor() {
+        const level = GameStorage.getItem('state');
+        console.log('got from state', level?.grid);
+        if (level?.grid) {
+            console.log('WEVE GOT A PRESELECTED LEVEL');
         }
-
         listen(EVENTS.LEVEL_LOADED, () => {
             dispatch$1(EVENTS.MODAL_HIDE, {modalId: 'selectLevelModal'});
         });
@@ -2669,13 +2697,8 @@ class Level {
         });
 
         socket.on('level:selected', ({selectedLevel}) => {
-            dispatch$1(EVENTS.LEVEL_SELECT_DOM, {level: selectedLevel});
             this.level = selectedLevel;
-        });
-
-        socket.on('lobby:created', ({lobby}) => {
-            dispatch$1(EVENTS.LEVEL_SELECT_DOM, {level: lobby.level});
-            this.level = lobby.level;
+            dispatch$1(EVENTS.GAME_CREATE_STATE);
         });
     }
 
@@ -2711,12 +2734,13 @@ class Level {
             return;
         }
 
-        createLevelSelectModal({modalId, Player, Lobby});
+        createLevelSelectModal({modalId, Player, Lobby, Level: this});
         dispatch$1(EVENTS.MODAL_SHOW, {modalId});
     }
 
-    set level(value) {
-        this.selectedLevel = value;
+    set level(level) {
+        this.selectedLevel = level;
+        dispatch$1(EVENTS.LEVEL_SELECT_DOM, {level});
     }
 
     get level() {
@@ -2951,14 +2975,36 @@ class Game {
 
     #cachedState = false;
     constructor() {
+        // Load state from localstorage
+        this.state = GameStorage.getItem('state');
+
         // Create player and connect to socket
         this.Player = new Player();
 
-        this.registerHandlers();
+        socket.on('game:start', () => {
+            this.start();
+        });
+
+        socket.on('lobby:updated', ({lobby}) => {
+            switch (lobby.state) {
+                            }
+        });
 
         socket.on('connect', () => {
             console.clear();
             this.initialize();
+        });
+
+        listen(EVENTS.GAME_CREATE_STATE, () => {
+            this.state = this.createState();
+        });
+        listen(EVENTS.GAME_NEW, () => {
+            this.new();
+        });
+        listen(EVENTS.GAME_START, () => {
+            // Level is loaded, state is created, now we need to go
+            // ahead and render the game
+            this.continue();
         });
     }
 
@@ -2979,9 +3025,10 @@ class Game {
             .then(LobbyInstance => {
                 this.Lobby = LobbyInstance;
                 // Select new level
-                this.Level = new Level(LobbyInstance);
+                this.Level = new Level({Lobby: LobbyInstance, Game: this});
                 this.Score = new Score();
 
+                // All ready now, start the game
                 this.start();
             })
             .catch(err => {
@@ -2989,68 +3036,37 @@ class Game {
             });
     }
 
-    registerHandlers() {
-        listen(EVENTS.GAME_NEW, () => {
-            this.resetState();
-            Lobby.setState(Game.STATE.LEVEL_SELECT);
-        });
-        listen(EVENTS.GAME_RESET, () => {
-            // Game is reset, start a new one.
-            dispatch$1(EVENTS.GAME_START);
-        });
-        listen(EVENTS.GAME_START, () => {
-            console.log('Broadcasting GAME START to SOCKET');
-            socket.emit('game:start');
-        });
-
-        socket.on('game:start', () => {
-            console.log('RECEIVED GAME START FROM SERVER');
-            this.start();
-        });
-
-        socket.on('level:selected', () => {
-            this.state = this.createState();
-        });
-
-        socket.on('lobby:updated', ({lobby}) => {
-            switch (lobby.state) {
-                case 'levelSelect':
-                    this.Level.select({Player: this.Player, Lobby: this.Lobby});
-                    break;
-                case 'inGame':
-                    this.load();
-                    break;
-            }
-        });
-    }
-
     start() {
         if (!this.state) {
+            // No state, select a level first.
+            //this.new();
             this.Level.select({Player: this.Player, Lobby: this.Lobby});
         } else {
-            // Load state
-            this.load();
-            Lobby.setState('inGame');
+            this.continue();
         }
     }
 
-    load() {
-        dispatch$1(EVENTS.MODAL_HIDE, {modalId: 'selectLevelModal'});
+    new() {
+        // Reset state, continue game
+        this.resetState();
+        // Continue rendering the newly created level
+        this.start();
+    }
+
+    continue() {
+        this.state = GameStorage.getItem('state');
+        // Load state from localstorage and trigger events to render level
         dispatch$1(EVENTS.RENDER_LEVEL);
     }
 
     resetState() {
         this.Level.reset();
         this.state = false;
-
-        dispatch$1(EVENTS.GAME_RESET);
     }
 
     createState() {
-        const self = this;
-        console.log('SETTING STATE LEVEL', self.Level.level);
         let state = {
-            grid: self.Level.level,
+            grid: this.Level.level,
             jokers: [],
             colorScores: {
                 high: [],
@@ -3087,6 +3103,7 @@ class Game {
     set state(value) {
         this.#cachedState = value;
         if (!value) {
+            console.log('Clearing local state');
             GameStorage.removeItem('state');
         } else {
             GameStorage.setItem('state', value);
