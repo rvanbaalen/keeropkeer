@@ -9,12 +9,13 @@
   },
   "devDependencies": {
     "@rollup/plugin-node-resolve": "^13.0.4",
+    "@rollup/plugin-replace": "^3.0.0",
     "rollup-plugin-serve": "^1.1.0",
     "rollup-plugin-terser": "^7.0.2"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "npx rollup -c",
+    "build": "NODE_ENV=production npx rollup -c",
     "watch": "npx rollup -cw"
   },
   "repository": {

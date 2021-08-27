@@ -174,8 +174,7 @@ window.EVENTS = EVENTS;
 window.dispatch = dispatch$1;
 window.listen = listen;
 
-// export const SOCKET_SERVER = 'https://dry-peak-80209.herokuapp.com/';
-const SOCKET_SERVER = 'http://192.168.1.111:3000/';
+const SOCKET_SERVER = 'https://dry-peak-80209.herokuapp.com/' ;
 
 const io = window.io;
 const socket = io(SOCKET_SERVER, { autoConnect: false });
@@ -184,6 +183,8 @@ localStorage.setItem('debug', 'socket.io-client:socket');
 socket.onAny((event, ...args) => {
     console.log(event, args);
 });
+
+console.log('Setup socket server ', SOCKET_SERVER);
 
 function registerModalEvents() {
     listen(EVENTS.MODAL_TOGGLE, event => {
