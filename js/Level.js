@@ -2063,14 +2063,6 @@ export class Level {
     };
 
     constructor() {
-        const level = GameStorage.getItem('state');
-        console.log('got from state', level?.grid);
-        if (level?.grid) {
-            console.log('WEVE GOT A PRESELECTED LEVEL');
-        }
-        listen(EVENTS.LEVEL_LOADED, () => {
-            dispatch(EVENTS.MODAL_HIDE, {modalId: 'selectLevelModal'});
-        });
         listen(EVENTS.LEVEL_SELECT_DOM, (event) => {
             const {level, element} = event.detail;
             Level.selectInDom(level, element);

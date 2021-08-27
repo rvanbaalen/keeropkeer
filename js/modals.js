@@ -68,7 +68,13 @@ export function createLevelSelectModal({modalId, Player, Lobby, Level}) {
 
     listenOnce(EVENTS.MODAL_SHOW, (event) => {
         if (modalId === event.detail.modalId && selectedLevel) {
-            dispatch(EVENTS.LEVEL_SELECT_DOM, {level: selectedLevel});
+            if (selectedLevel) {
+                // If there's a selected level, mark it in the dom
+                dispatch(EVENTS.LEVEL_SELECT_DOM, {level: selectedLevel});
+            } else {
+                // if not, make sure the local state reflects that.
+                dispatch(EVENTS.LEVEL_SELECT_DOM, {level: ''});
+            }
         }
     })
 

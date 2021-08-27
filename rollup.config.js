@@ -3,6 +3,24 @@ import serve from "rollup-plugin-serve";
 import nodeResolve from "@rollup/plugin-node-resolve";
 import replace from "@rollup/plugin-replace";
 
+const plugins = [
+    replace({
+        exclude: 'node_modules/**',
+        preventAssignment: true,
+        ENV: JSON.stringify(process.env.NODE_ENV || 'development')
+    }),
+    nodeResolve({
+        browser: true
+    })
+];
+if (process.env.NODE_ENV !== 'production') {
+    plugins.push(
+        serve({
+            open: true,
+            port: 10001,
+        }),
+    );
+}
 /**
  * @type {import('rollup').RollupOptions}
  */
@@ -18,20 +36,7 @@ const config = {
         }
     ],
     inlineDynamicImports: true,
-    plugins: [
-        replace({
-            exclude: 'node_modules/**',
-            preventAssignment: true,
-            ENV: JSON.stringify(process.env.NODE_ENV || 'development')
-        }),
-        serve({
-            open: true,
-            port: 10001,
-        }),
-        nodeResolve({
-            browser: true
-        })
-    ]
+    plugins
 };
 
 export default config;

@@ -104,30 +104,16 @@ document.querySelector('body').classList.add('lang-' + lang);
 const language = nl;
 
 const EVENTS = {
-    GAME_CONNECTED: 'game-connected',
     GAME_NEW: 'game-new',
     GAME_START: 'game-start',
-    GAME_CONTINUE: 'game-continue',
     GAME_CREATE_STATE: 'game-create-state',
-    LEVEL_SELECT: 'level-select',
-    LEVEL_LOADED: 'level-loaded',
     SCORE_RELOAD: 'score-reload',
     SCORE_TOTAL_TOGGLE: 'score-total-toggle',
     MODAL_TOGGLE: 'modal-toggle',
     MODAL_HIDE: 'modal-hide',
     MODAL_SHOW: 'modal-show',
-    LOBBY_READY: 'lobby-ready',
-    LOBBY_JOIN: 'lobby-join',
-    LOBBY_JOIN_FAILED: 'lobby-join-failed',
-    LOBBY_JOINED: 'lobby-joined',
-    LOBBY_CREATED: 'lobby-created',
-    LOBBY_DELETED: 'lobby-deleted',
-    PLAYER_REGISTERED: 'player-registered',
-    PLAYER_REGISTRATION_FAILED: 'player-registration-failed',
-    PLAYER_DELETED: 'player-deleted',
     GRID_BLOCK_SELECTED: 'grid-block-selected',
-    GRID_COLUMN_COMPLETE: 'grid-column-complete',
-    ENGINE_GRID_RENDER_COMPLETE: 'grid-render-complete',
+    GRID_RENDER_COMPLETE: 'grid-render-complete',
     JOKER_SELECTED: 'joker-selected',
     STAR_SELECTED: 'star-selected',
     RENDER_JOKER_SCORE: 'render-joker-score',
@@ -138,22 +124,17 @@ const EVENTS = {
     RENDER_LEVEL: 'render-level',
     RENDER_SCORES: 'render-scores',
     LOADING: 'loading',
-    LOADING_DONE: 'loading-done',
-    PLAYER_JOINED: 'player-joined',
     LEVEL_SELECT_DOM: 'level-select-dom',
-
 };
 
 const app = $('app');
 const register = {};
 
 function dispatch$1(eventName, eventData) {
-    console.info('Fired event: ' + eventName, eventData);
     let event = new CustomEvent(eventName, { detail: eventData });
     app.dispatchEvent(event);
 
     if (register[eventName]?.once) {
-        console.log('remove listener for ', eventName);
         app.removeEventListener(eventName, register[eventName].callback, false);
     }
 }
@@ -168,23 +149,10 @@ function listenOnce(eventName, callback) {
     return listen(eventName, callback, true);
 }
 
-
-// Debugging purposes.
-window.EVENTS = EVENTS;
-window.dispatch = dispatch$1;
-window.listen = listen;
-
 const SOCKET_SERVER = 'https://dry-peak-80209.herokuapp.com/' ;
 
 const io = window.io;
 const socket = io(SOCKET_SERVER, { autoConnect: false });
-localStorage.setItem('debug', 'socket.io-client:socket');
-
-socket.onAny((event, ...args) => {
-    console.log(event, args);
-});
-
-console.log('Setup socket server ', SOCKET_SERVER);
 
 function registerModalEvents() {
     listen(EVENTS.MODAL_TOGGLE, event => {
@@ -250,7 +218,13 @@ function createLevelSelectModal({modalId, Player, Lobby, Level}) {
 
     listenOnce(EVENTS.MODAL_SHOW, (event) => {
         if (modalId === event.detail.modalId && selectedLevel) {
-            dispatch$1(EVENTS.LEVEL_SELECT_DOM, {level: selectedLevel});
+            if (selectedLevel) {
+                // If there's a selected level, mark it in the dom
+                dispatch$1(EVENTS.LEVEL_SELECT_DOM, {level: selectedLevel});
+            } else {
+                // if not, make sure the local state reflects that.
+                dispatch$1(EVENTS.LEVEL_SELECT_DOM, {level: ''});
+            }
         }
     });
 
@@ -2681,14 +2655,6 @@ class Level {
     };
 
     constructor() {
-        const level = GameStorage.getItem('state');
-        console.log('got from state', level?.grid);
-        if (level?.grid) {
-            console.log('WEVE GOT A PRESELECTED LEVEL');
-        }
-        listen(EVENTS.LEVEL_LOADED, () => {
-            dispatch$1(EVENTS.MODAL_HIDE, {modalId: 'selectLevelModal'});
-        });
         listen(EVENTS.LEVEL_SELECT_DOM, (event) => {
             const {level, element} = event.detail;
             Level.selectInDom(level, element);
@@ -2882,18 +2848,6 @@ class Player {
                 autoHide: true
             });
         });
-
-        socket.on('player:disconnected', ({player}) => {
-            // Notify.show({
-            //     title: language.notification.playerDisconnected.title,
-            //     message: language.notification.playerDisconnected.message(player.username),
-            //     autoHide: true
-            // });
-        });
-
-        // socket.on('connect', () => {
-        //     dispatch(EVENTS.GAME_CONNECTED);
-        // });
     }
 
     static setPlayerTotalDom({totalPlayers}) {
@@ -3399,7 +3353,7 @@ class Engine {
         this.parseJokerColumn(this.currentGame.state);
         this.parseScoreColumns(this.currentGame.state);
 
-        dispatch$1(EVENTS.ENGINE_GRID_RENDER_COMPLETE);
+        dispatch$1(EVENTS.GRID_RENDER_COMPLETE);
     }
 
     parseTotalScores() {
@@ -3500,7 +3454,7 @@ class Engine {
         let selectedBlocks = columnTemplate.querySelectorAll('.selected');
         let columnLetter = columnTemplate.querySelector('.letter').innerText.toUpperCase();
         if (blocks.length === selectedBlocks.length) {
-            dispatch$1(EVENTS.GRID_COLUMN_COMPLETE, {columnLetter});
+            socket.emit('grid:column-complete', {columnLetter});
         }
 
         return columnTemplate;

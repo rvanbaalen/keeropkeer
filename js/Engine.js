@@ -231,7 +231,7 @@ export class Engine {
         this.parseJokerColumn(this.currentGame.state);
         this.parseScoreColumns(this.currentGame.state);
 
-        dispatch(EVENTS.ENGINE_GRID_RENDER_COMPLETE);
+        dispatch(EVENTS.GRID_RENDER_COMPLETE);
     }
 
     parseTotalScores() {
@@ -332,7 +332,7 @@ export class Engine {
         let selectedBlocks = columnTemplate.querySelectorAll('.selected');
         let columnLetter = columnTemplate.querySelector('.letter').innerText.toUpperCase();
         if (blocks.length === selectedBlocks.length) {
-            dispatch(EVENTS.GRID_COLUMN_COMPLETE, {columnLetter});
+            socket.emit('grid:column-complete', {columnLetter})
         }
 
         return columnTemplate;

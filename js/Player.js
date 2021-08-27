@@ -41,18 +41,6 @@ export class Player {
                 autoHide: true
             });
         });
-
-        socket.on('player:disconnected', ({player}) => {
-            // Notify.show({
-            //     title: language.notification.playerDisconnected.title,
-            //     message: language.notification.playerDisconnected.message(player.username),
-            //     autoHide: true
-            // });
-        });
-
-        // socket.on('connect', () => {
-        //     dispatch(EVENTS.GAME_CONNECTED);
-        // });
     }
 
     static setPlayerTotalDom({totalPlayers}) {
