@@ -2,12 +2,18 @@ import {terser} from "rollup-plugin-terser";
 import serve from "rollup-plugin-serve";
 import nodeResolve from "@rollup/plugin-node-resolve";
 import replace from "@rollup/plugin-replace";
+import replaceHtmlVars from 'rollup-plugin-replace-html-vars';
 
 const plugins = [
     replace({
         exclude: 'node_modules/**',
         preventAssignment: true,
         ENV: JSON.stringify(process.env.NODE_ENV || 'development')
+    }),
+    replaceHtmlVars({
+        files: '**/index.html',
+        from: /\.\/\w+\/\w+\.\w+.\w+\?v=\d+/g,
+        to: './dist/app.min.js?v=' + Date.now(),
     }),
     nodeResolve({
         browser: true
