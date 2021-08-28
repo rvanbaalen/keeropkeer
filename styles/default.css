@@ -41,6 +41,31 @@ body {
 #blockGrid {
     float: left;
 }
+
+#loading-wrapper {
+    text-align: center;
+}
+#loading-wrapper h2 {
+    color: #fff;
+    font-size: 80px;
+    text-transform: uppercase;
+    font-weight: 700;
+    background: linear-gradient(to right, var(--orange), #ffef9e, #32e883, #4f52ff, #ff1e53, var(--orange));
+    background-size: 200% auto;
+    background-clip: text;
+    text-fill-color: transparent;
+    -webkit-text-fill-color: transparent;
+    animation: rainbowAnimation 6s linear infinite;
+    animation-direction: alternate;
+    display: inline-block;
+}
+
+@keyframes rainbowAnimation {
+    to {
+        background-position: 200% center;
+    }
+}
+
 .jokers {
     background: #fff;
     border-radius: 4px;

@@ -18,6 +18,8 @@ export class Engine {
         this.parseOrientationOverlay();
         this.parseGenericLoading();
 
+        $('connecting-message').innerText = language.messages.connecting;
+
         listen(EVENTS.LOADING, () => {
             dispatch(EVENTS.MODAL_SHOW, {modalId: 'genericLoading'});
         });
@@ -51,8 +53,8 @@ export class Engine {
             Session.cachedId = sessionId;
         });
 
-        socket.on('disconnect', () => {
-            // Nothing yet?
+        socket.on('connect', () => {
+            $('connecting-message').style.display = 'none';
         });
     }
 

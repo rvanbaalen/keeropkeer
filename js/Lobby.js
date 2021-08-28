@@ -35,7 +35,8 @@ export class Lobby {
             socket.emit('lobby:join', {lobbyCode});
         } else {
             // Create lobby
-            const lobbyCode = prompt(language.notification.createLobby, randomString(4).toUpperCase());
+            let lobbyCode = prompt(language.notification.createLobby, randomString(4).toUpperCase());
+            lobbyCode = lobbyCode.toUpperCase();
             socket.emit('lobby:create', {lobbyCode});
         }
 

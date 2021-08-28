@@ -71,6 +71,9 @@ var nl = {
         totals: 'Totaal',
         jokers: 'Jokers'
     },
+    messages: {
+        connecting: 'Bezig met verbinden ...'
+    },
     notification: {
         landscapeMode: 'Draai het scherm horizontaal om te beginnen.',
         selectLevel: 'Selecteer een level.',
@@ -80,10 +83,6 @@ var nl = {
         playerJoined: {
             title: 'Een speler is verbonden',
             message(username = 'onbekend') { return `${username} speelt mee!`; }
-        },
-        playerDisconnected: {
-            title: 'Verbinding met speler verbroken',
-            message(username = 'onbekend') { return `${username} is niet meer verbonden.`; }
         }
     },
     lobbyStats(code, players) { return ` er ${players > 1 ? 'zijn' : 'is'} ${players} speler${players > 1 ? 's' : ''} in lobby '${code}'` }
@@ -131,10 +130,16 @@ const app = $('app');
 const register = {};
 
 function dispatch$1(eventName, eventData) {
+    {
+        console.info('Fired event: ' + eventName, eventData);
+    }
     let event = new CustomEvent(eventName, { detail: eventData });
     app.dispatchEvent(event);
 
     if (register[eventName]?.once) {
+        {
+            console.log('remove listener for ', eventName);
+        }
         app.removeEventListener(eventName, register[eventName].callback, false);
     }
 }
@@ -149,10 +154,28 @@ function listenOnce(eventName, callback) {
     return listen(eventName, callback, true);
 }
 
-const SOCKET_SERVER = 'https://dry-peak-80209.herokuapp.com/' ;
+
+{
+    // Debugging purposes.
+    window.EVENTS = EVENTS;
+    window.dispatch = dispatch$1;
+    window.listen = listen;
+}
+
+const SOCKET_SERVER = 'http://192.168.1.111:3000/';
 
 const io = window.io;
 const socket = io(SOCKET_SERVER, { autoConnect: false });
+
+{
+    localStorage.setItem('debug', 'socket.io-client:socket');
+
+    socket.onAny((event, ...args) => {
+        console.log(event, args);
+    });
+
+    console.log('Setup socket server ', SOCKET_SERVER);
+}
 
 function registerModalEvents() {
     listen(EVENTS.MODAL_TOGGLE, event => {
@@ -479,7 +502,8 @@ class Lobby {
             socket.emit('lobby:join', {lobbyCode});
         } else {
             // Create lobby
-            const lobbyCode = prompt(language.notification.createLobby, randomString(4).toUpperCase());
+            let lobbyCode = prompt(language.notification.createLobby, randomString(4).toUpperCase());
+            lobbyCode = lobbyCode.toUpperCase();
             socket.emit('lobby:create', {lobbyCode});
         }
 
@@ -3140,6 +3164,8 @@ class Engine {
         this.parseOrientationOverlay();
         this.parseGenericLoading();
 
+        $('connecting-message').innerText = language.messages.connecting;
+
         listen(EVENTS.LOADING, () => {
             dispatch$1(EVENTS.MODAL_SHOW, {modalId: 'genericLoading'});
         });
@@ -3173,8 +3199,8 @@ class Engine {
             Session.cachedId = sessionId;
         });
 
-        socket.on('disconnect', () => {
-            // Nothing yet?
+        socket.on('connect', () => {
+            $('connecting-message').style.display = 'none';
         });
     }
 
