@@ -54,7 +54,10 @@ export class Engine {
         });
 
         socket.on('connect', () => {
-            $('connecting-message').style.display = 'none';
+            document.body.classList.toggle('connected');
+        });
+        socket.on('disconnect', () => {
+            document.body.classList.toggle('connected');
         });
     }
 

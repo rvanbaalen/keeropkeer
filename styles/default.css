@@ -22,12 +22,14 @@ body {
     font-weight: bolder;
 }
 #app {
+    opacity: 0;
     display: grid;
     justify-content: center;
     align-items: center;
     height: 100vh;
     position: relative;
     margin-top: 40px;
+    transition: opacity .3s ease;
 }
 #grid {
     position: relative;
@@ -58,12 +60,23 @@ body {
     animation: rainbowAnimation 6s linear infinite;
     animation-direction: alternate;
     display: inline-block;
+    transition: opacity .3s ease;
 }
 
 @keyframes rainbowAnimation {
     to {
         background-position: 200% center;
     }
+}
+
+.connected #loading-wrapper {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    height: 1px;
+}
+.connected #app {
+    opacity: 1;
 }
 
 .jokers {
