@@ -1,115 +1,61 @@
-:root {
-    --block-size: 30px;
-    --circle-size: 26px;
-    --orange: orange;
-    --yellow: #eecf35;
-    --red: #c7153f;
-    --blue: cornflowerblue;
-    --green: mediumseagreen;
-    --button-primary-color: #2563EB;
-    --button-secondary-color: #8dabff;
-    --notification-background: #DBEAFE;
-    --notification-color: #000;
-}
-html,
-body {
-    height: 100%;
-}
-body {
-    user-select: none;
-    background: #000;
-    font-family: Arial, sans-serif;
-    font-weight: bolder;
-}
-#app {
-    opacity: 0;
-    display: grid;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
-    position: relative;
-    margin-top: 40px;
-    transition: opacity .3s ease;
-}
-#grid {
-    position: relative;
-    float: left;
-    display: flow-root;
-    padding-bottom: 50px;
-}
+@import "vars.css";
+@import "base.css";
+@import "animations.css";
+@import "levels.css";
+@import "loader.css";
+@import "windows.css";
+
 .columns {
-    display: flow-root;
+    width: 100%;
+    justify-content: flex-start;
+    display: flex;
 }
 #blockGrid {
-    float: left;
-}
-
-#loading-wrapper {
-    text-align: center;
-}
-#loading-wrapper h2 {
-    color: #fff;
-    font-size: 80px;
-    text-transform: uppercase;
-    font-weight: 700;
-    background: linear-gradient(to right, var(--orange), #ffef9e, #32e883, #4f52ff, #ff1e53, var(--orange));
-    background-size: 200% auto;
-    background-clip: text;
-    text-fill-color: transparent;
-    -webkit-text-fill-color: transparent;
-    animation: rainbowAnimation 6s linear infinite;
-    animation-direction: alternate;
-    display: inline-block;
-    transition: opacity .3s ease;
-}
-
-@keyframes rainbowAnimation {
-    to {
-        background-position: 200% center;
-    }
-}
-
-.connected #loading-wrapper {
-    opacity: 0;
-    visibility: hidden;
-    pointer-events: none;
-    height: 1px;
-}
-.connected #app {
-    opacity: 1;
+    flex-basis: 480px;
+    flex-shrink: 0;
+    flex-grow: 1;
 }
 
 .jokers {
-    background: #fff;
     border-radius: 4px;
-    margin-right: 8px;
-    float: left;
-}
-.rounded-block {
-    border-radius: 4px;
-    background: #fff;
-    width: var(--block-size);
-    height: var(--block-size);
-    line-height: var(--block-size);
-    display: block;
-    text-align: center;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-around;
+    flex-shrink: 0;
+    flex-grow: 1;
+    flex-basis: 40px;
 }
 .joker {
     cursor: pointer;
     position: relative;
-    width: var(--block-size);
-    height: var(--block-size);
+    min-width: var(--block-size);
+    min-height: var(--block-size);
     line-height: var(--block-size);
-    font-size: 20px;
+    font-size: 18px;
     background: mediumseagreen;
     display: block;
-    margin: 5px;
+    margin: 2px auto;
     border-radius: 50%;
     color: #fff;
     text-align: center;
 }
 .joker.used {
     background: red;
+}
+.scoreContainer {
+    margin-left: 50px;
+    flex-shrink: 0;
+}
+.rounded-block {
+    color: var(--text-base-color);
+    border-radius: 4px;
+    background: #fff;
+    width: var(--block-size);
+    height: var(--block-size);
+    line-height: var(--block-size);
+    display: block;
+    text-align: center;
+    font-size: 18px;
 }
 .letter {
     width: var(--block-size);
@@ -136,8 +82,8 @@ body {
     margin: 0 0 -2px -2px;
     background: blue;
     display: block;
-    width: var(--block-size);
-    height: var(--block-size);
+    min-width: var(--block-size);
+    min-height: var(--block-size);
     border-radius: 5px;
     position: relative;
     overflow: hidden;
@@ -147,8 +93,8 @@ body {
     background: #fff;
     opacity: .2;
     border-radius: 50%;
-    width: var(--circle-size);
-    height: var(--circle-size);
+    min-width: var(--circle-size);
+    min-height: var(--circle-size);
     position: absolute;
     top: 50%;
     left: 50%;
@@ -220,10 +166,12 @@ span.column-score.taken {
     background: #fff;
 }
 .final-score span {
+    color: #000;
     mix-blend-mode: color-burn;
     text-align: center;
-    width: var(--block-size);
-    font-size: 24px;
+    min-width: var(--block-size);
+    min-height: var(--block-size);
+    font-size: 20px;
     position: absolute;
     line-height: var(--block-size);
 }
@@ -238,14 +186,15 @@ span.column-score.taken {
     left: 0;
 }
 .totals {
+    color: var(--text-base-color);
     background: #fff;
     height: 30px;
+    width: 49px;
     border-radius: 4px;
     position: absolute;
-    right: -31px;
+    right: -30px;
     margin-top: 2px;
     line-height: 30px;
-    width: 49px;
     padding-left: 7px;
     padding-right: 7px;
 }
@@ -261,11 +210,12 @@ span.column-score.taken {
     font-size: 12px;
     line-height: var(--block-size);
 }
-.totals#bonus label {
+.rainbow {
     text-transform: uppercase;
     background: linear-gradient(to right, var(--orange), #ffef9e, #32e883, #4f52ff, #ff1e53);
     background-clip: text;
-    color: transparent;
+    color: transparent !important;
+    display: inline-block;
 }
 .totals#columns {
     margin-top: 34px;
@@ -321,7 +271,7 @@ span.column-score.taken {
     box-shadow: 0 0 30px #000;
 }
 .modal-body p {
-    color: #333;
+    color: var(--text-base-color);
 }
 .modal-button-bar {
     text-align: right;
@@ -351,22 +301,18 @@ a.button.button-cancel {
     background-color: var(--button-secondary-color);
 }
 
-.new-game {
-    position: absolute;
+#newGameButton {
     background: var(--button-primary-color);
-    padding: 5px 5px 3px;
+    padding: 7px 11px 5px;
     word-break: break-all;
-    width: 30px;
-    font-size: 10px;
     text-transform: uppercase;
     color: #fff;
     text-align: center;
     border-radius: 3px;
-    bottom: 51px;
     cursor: pointer;
 }
-body.lang-nl .new-game {
-    font-size: 9px;
+body.lang-nl #newGameButton {
+    font-size: 12px;
 }
 
 .level-image-container {
@@ -446,9 +392,6 @@ body.lang-nl .new-game {
     text-align: center;
 }
 
-#selectLevelModal .modal-container {
-    max-width: 500px;
-}
 #startGameWrap {
     display: block;
     margin: 0 auto;
@@ -494,16 +437,6 @@ body.lang-nl .new-game {
     #orientationModal .modal-container {
         width: 70%;
     }
-
-    #grid {
-        opacity: 0;
-    }
-
-    #selectLevelModal {
-        visibility: hidden;
-        opacity: 0;
-        pointer-events: none;
-    }
 }
 /* landscape */
 @media screen and (orientation:landscape) {
@@ -511,9 +444,5 @@ body.lang-nl .new-game {
         visibility: hidden;
         opacity: 0;
         pointer-events: none;
-    }
-
-    #grid {
-        opacity: 1;
     }
 }

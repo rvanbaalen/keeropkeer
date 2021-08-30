@@ -1,0 +1,25 @@
+html,
+body {
+    height: 100%;
+}
+body {
+    user-select: none;
+    background: #000;
+    font-family: Arial, sans-serif;
+    font-weight: bolder;
+}
+#app {
+    margin: 150px 0;
+    display: none;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    position: relative;
+    transition: opacity .3s ease;
+}
+.connected #loading-wrapper {
+    display: none;
+}
+.connected #app {
+    display: flex;
+}

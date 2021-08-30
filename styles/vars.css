@@ -1,0 +1,14 @@
+:root {
+    --block-size: 30px;
+    --circle-size: 26px;
+    --orange: orange;
+    --yellow: #eecf35;
+    --red: #c7153f;
+    --blue: cornflowerblue;
+    --green: mediumseagreen;
+    --button-primary-color: #2563EB;
+    --button-secondary-color: #8dabff;
+    --notification-background: #DBEAFE;
+    --notification-color: #000;
+    --text-base-color: #333;
+}

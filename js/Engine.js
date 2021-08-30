@@ -1,5 +1,5 @@
 import {$} from "./utilities.js";
-import {createElement, renderButton, renderTemplate} from "./rendering.js";
+import {createElement, renderButton} from "./rendering.js";
 import {createNewGameModal, createNewModal, registerModalEvents} from "./modals.js";
 import {dispatch, EVENTS, listen} from "./events.js";
 import {Game} from "./Game.js";
@@ -7,11 +7,17 @@ import language from "../lang/default.js";
 import socket from "./socket";
 import {GameStorage} from "./GameStorage";
 import {Session} from "./Session";
+import {Layout} from "./Layout";
+import {Application} from "./Application";
 
 export class Engine {
     currentGame = false;
+    application;
     version;
     constructor() {
+        $('app').innerHTML += Layout.render();
+        this.application = new Application();
+
         registerModalEvents();
 
         this.currentGame = new Game();
@@ -26,23 +32,24 @@ export class Engine {
         listen(EVENTS.RENDER_LEVEL, () => {
             this.render();
         });
-        listen(EVENTS.RENDER_JOKER_SCORE, (event) => {
-            this.renderJokerScore(event.detail.value)
-        })
         listen(EVENTS.RENDER_SCORES, (event) => {
-            const {scores} = event.detail;
+            const {scores} = event.detail, Score = this.currentGame.Score;
             if (typeof scores.bonus !== 'undefined') {
-                this.renderBonusScore(scores.bonus);
+                Score.renderBonusScore(scores.bonus);
             }
             if (typeof scores.columns !== 'undefined') {
-                this.renderColumnScore(scores.columns);
+                Score.renderColumnScore(scores.columns);
             }
             if (typeof scores.jokers !== 'undefined') {
-                this.renderJokerScore(scores.jokers);
+                Score.renderJokerScore(scores.jokers);
             }
             if (typeof scores.stars !== 'undefined') {
-                this.renderStarScore(scores.stars);
+                Score.renderStarScore(scores.stars);
             }
+        });
+
+        socket.on('grid:column-completed', ({columnLetter, player}) => {
+
         });
 
         socket.on('version', version => {
@@ -61,22 +68,6 @@ export class Engine {
         });
     }
 
-    renderBonusScore(value) {
-        $('bonusTotal').innerText = value;
-    }
-
-    renderColumnScore(value) {
-        $('columnsTotal').innerText = value;
-    }
-
-    renderJokerScore(value) {
-        $('jokerTotal').innerText = value;
-    }
-
-    renderStarScore(value) {
-        $('starsTotal').innerText = value;
-    }
-
     parseOrientationOverlay() {
         createNewModal({
             id: 'orientationModal',
@@ -93,17 +84,21 @@ export class Engine {
     }
 
     parseColumnGrid(state) {
-        $('blockGrid').innerHTML = '';
+        const blockGrid = $('blockGrid');
+        blockGrid.innerHTML = '';
         state.grid.forEach(column => {
-            $('blockGrid').append(this.parseColumn(column));
+            blockGrid.innerHTML += this.parseColumn(column);
         });
 
         // Colored blocks
         let scoreBlocks = document.querySelectorAll('.score-block:not(.final-score)');
         Array.prototype.forEach.call(scoreBlocks, (block) => {
-            block.addEventListener('click', () => {
+            block.addEventListener('click', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+
                 let selected = !block.classList.contains('selected');
-                this.currentGame.updateBlockState(block.data.column, block.data.row, 'selected', selected);
+                this.currentGame.updateBlockState(block.dataset.column, block.dataset.row, 'selected', selected);
                 dispatch(EVENTS.GRID_BLOCK_SELECTED, {selected, block});
                 if (block.querySelectorAll('.star').length > 0) {
                     // Has a star, update star score.
@@ -115,19 +110,17 @@ export class Engine {
 
     parseJokerColumn(state) {
         let jokerContainer = $('jokerContainer');
-        jokerContainer.innerHTML = '';
-        state.jokers.forEach(joker => {
-            let renderedJoker = createElement('span', {className: 'joker', innerText: '!'});
-            if (joker.selected) {
-                renderedJoker.classList.add('used');
-            }
-            jokerContainer.append(renderedJoker);
-        });
+        jokerContainer.innerHTML = state.jokers.map(joker => {
+            return `<span class="joker${joker.selected ? ' used' : ''}">!</span>`
+        }).join('');
 
         // Joker events
         let jokers = document.getElementsByClassName('joker');
         Array.prototype.forEach.call(jokers, (joker, index) => {
-            joker.addEventListener('click', () => {
+            joker.addEventListener('click', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+
                 let selected = !joker.classList.contains('used');
                 this.currentGame.updateJokerState(index, selected);
                 dispatch(EVENTS.JOKER_SELECTED, {joker, selected});
@@ -136,18 +129,26 @@ export class Engine {
     }
 
     parseScoreColumns(state) {
-        $('scoreColumn1').innerHTML = '';
-        state.colorScores.high.forEach(colorScore => {
-            let element = createElement('span', {className: 'score-block final-score ' + colorScore.color});
-            if (colorScore.value === -1) {
-                element.classList.add('selected');
+        $('scoreColumn1').innerHTML = state.colorScores.high.map(colorScore => {
+            const valueClass = (value) => {
+                if (value === -1) return ' selected';
+                if (value === 5) return ' final-selected';
+                return '';
             }
-            if (colorScore.value === 5) {
-                element.classList.add('final-selected');
-            }
-            createElement('span', {innerText: 5}, element);
-            $('scoreColumn1').append(element);
-        });
+
+            return `<span class="score-block final-score ${colorScore.color}${valueClass(colorScore.value)}"><span>5</span></span>`;
+        }).join('');
+        // state.colorScores.high.forEach(colorScore => {
+        //     let element = createElement('span', {className: 'score-block final-score ' + colorScore.color});
+        //     if (colorScore.value === -1) {
+        //         element.classList.add('selected');
+        //     }
+        //     if (colorScore.value === 5) {
+        //         element.classList.add('final-selected');
+        //     }
+        //     createElement('span', {innerText: 5}, element);
+        //     $('scoreColumn1').append(element);
+        // });
 
         $('scoreColumn2').innerHTML = '';
         state.colorScores.low.forEach(colorScore => {
@@ -188,7 +189,10 @@ export class Engine {
         };
         let highScores = document.querySelectorAll('#scoreColumn1 .final-score');
         Array.prototype.forEach.call(highScores, (highScore) => {
-            highScore.addEventListener('click', () => {
+            highScore.addEventListener('click', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+
                 this.currentGame.updateColorScoreState(
                     'high',
                     getColorFromElement(highScore),
@@ -200,7 +204,10 @@ export class Engine {
         });
         let lowScores = document.querySelectorAll('#scoreColumn2 .final-score');
         Array.prototype.forEach.call(lowScores, (lowScore) => {
-            lowScore.addEventListener('click', () => {
+            lowScore.addEventListener('click', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+
                 this.currentGame.updateColorScoreState(
                     'low',
                     getColorFromElement(lowScore),
@@ -214,18 +221,14 @@ export class Engine {
         // Column scores
         let columnScores = document.querySelectorAll('span.column-score');
         Array.prototype.forEach.call(columnScores, (columnScore) => {
-            columnScore.addEventListener('click', () => {
-                let col = columnScore.data.column, row = columnScore.data.row, state;
+            columnScore.addEventListener('click', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
 
-                if (!columnScore.classList.contains('active') && !columnScore.classList.contains('taken')) {
-                    state = 'active';
-                } else if (columnScore.classList.contains('active') && !columnScore.classList.contains('taken')) {
-                    state = 'taken';
-                } else {
-                    state = 'default';
-                }
-
-                this.currentGame.updateState(col, row, 'state', state, 'score');
+                dispatch(EVENTS.SCORE_TOGGLE_COLUMN, {
+                    column: columnScore.dataset.column,
+                    element: columnScore
+                })
                 dispatch(EVENTS.SCORE_RELOAD);
             }, false);
         });
@@ -246,7 +249,7 @@ export class Engine {
 
         const totalScoresTemplate = `
             <div id="totalScores">
-                <div class="totals" id="bonus"><label>${language.label.bonus}</label><span class="label">=</span><span id="bonusTotal" class="totalValue">15</span></div>
+                <div class="totals" id="bonus"><label class="rainbow">${language.label.bonus}</label><span class="label">=</span><span id="bonusTotal" class="totalValue">15</span></div>
                 <div class="totals" id="columns"><label>${language.label.columns}</label><span class="label">+</span><span id="columnsTotal" class="totalValue"></span></div>
                 <div class="totals" id="jokers"><label>${language.label.jokers}</label><span class="label">+</span><span id="jokerTotal" class="totalValue"></span></div>
                 <div class="totals" id="stars"><label>${language.label.stars}</label><span class="label">-</span><span id="starsTotal" class="totalValue"></span></div>
@@ -256,15 +259,18 @@ export class Engine {
             </div>
         `;
 
-        $('scoreColumn').append(renderTemplate(totalScoresTemplate));
+        $('scoreColumn').innerHTML += totalScoresTemplate;
 
-        $('totals').addEventListener('click', () => {
-            dispatch(EVENTS.SCORE_SHOW);
+        $('totals').addEventListener('click', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+
+            dispatch(EVENTS.SCORE_TOTAL_TOGGLE);
         }, false);
     }
 
     renderNewGameButton(callback) {
-        const id = 'newGame';
+        const id = 'newGameButton';
         if ($(id)) {
             return;
         }
@@ -276,7 +282,7 @@ export class Engine {
         });
 
         // New game button
-        $('grid').append(button);
+        $('gameView').append(button);
 
         return button;
     }
@@ -286,7 +292,10 @@ export class Engine {
         this.parseTotalScores();
 
         const modalId = 'newGameModal';
-        createNewGameModal({modalId});
+        if (!$(modalId)) {
+            createNewGameModal({modalId});
+        }
+
         this.renderNewGameButton((event) => {
             event.preventDefault()
             dispatch(EVENTS.MODAL_SHOW, {modalId});
@@ -296,50 +305,41 @@ export class Engine {
     }
 
     parseColumn(column) {
-        let columnTemplate = createElement('div', {className: 'column' + (column.column === 'H' ? ' highlight' : '')});
-        // create header
-        createElement('span', {className: 'letter rounded-block', innerText: column.column}, columnTemplate);
+        let blocks = column.grid.length, selectedBlocks = 0;
+
+        let tpl = `
+            <div class="column${column.column === 'H' ? ' highlight' : ''}">
+                <span class="rounded-block" data-letter="${column.column}">${column.column}</span>
+                ${renderColumnBlocks(column.grid)}
+                <div class="column-score">${renderColumnScores(column.score)}</div>
+            </div>
+        `;
 
         // create grid blocks
-        column.grid.forEach((block, index) => {
-            const row = createElement('span', {
-                className: 'score-block ' + block.color,
-                data: {
-                    column: column.column,
-                    row: index
-                }
-            });
-            if (block.star) {
-                createElement('span', {className: 'star', innerText: '*'}, row);
-            }
-            if (block.selected) {
-                row.classList.add('selected');
-            }
+        function renderColumnBlocks(blocks) {
+            return blocks.map((block, index) => {
+                if (block.selected) selectedBlocks++;
 
-            columnTemplate.append(row);
-        });
+                return `
+                    <span class="score-block${block.selected ? ' selected' : ''} ${block.color}" data-column="${column.column}" data-row="${index}">
+                        ${block.star ? `<span class="star">*</span>` : ``}
+                    </span>
+                `;
+            }).join('');
+        }
         // create score columns
-        let score = createElement('div', {className: 'column-score'});
-        column.score.forEach((scoreObject, index) => {
-            let state = (scoreObject.state && scoreObject.state !== 'default') ? ' ' + scoreObject.state : '';
-            createElement('span', {
-                className: 'rounded-block column-score' + state,
-                innerText: scoreObject.value,
-                data: {
-                    column: column.column,
-                    row: index
-                }
-            }, score);
-        });
-        columnTemplate.append(score);
-
-        let blocks = columnTemplate.querySelectorAll('.score-block');
-        let selectedBlocks = columnTemplate.querySelectorAll('.selected');
-        let columnLetter = columnTemplate.querySelector('.letter').innerText.toUpperCase();
-        if (blocks.length === selectedBlocks.length) {
-            socket.emit('grid:column-complete', {columnLetter})
+        //let score = createElement('div', {className: 'column-score'});
+        function renderColumnScores(scores) {
+            return scores.map((scoreObject, index) => {
+                let state = (scoreObject.state && scoreObject.state !== 'default') ? ' ' + scoreObject.state : '';
+                return `<span class="rounded-block column-score${state}" data-column="${column.column}" data-row="${index}">${scoreObject.value}</span>`;
+            }).join('');
         }
 
-        return columnTemplate;
+        if (blocks === selectedBlocks) {
+            socket.emit('grid:column-complete', {columnLetter: column.column});
+        }
+
+        return tpl;
     }
 }

@@ -8,7 +8,9 @@ const plugins = [
     replace({
         exclude: 'node_modules/**',
         preventAssignment: true,
-        ENV: JSON.stringify(process.env.NODE_ENV || 'development')
+        values: {
+            'ENV': JSON.stringify(process.env.NODE_ENV || 'development')
+        }
     }),
     replaceHtmlVars({
         files: '**/index.html',
@@ -23,6 +25,7 @@ if (process.env.NODE_ENV !== 'production') {
     plugins.push(
         serve({
             open: true,
+            openPage: 'debug.html',
             port: 10001,
         }),
     );

@@ -5,15 +5,11 @@ import {Score} from "./Score.js";
 import socket from "./socket";
 import {GameStorage} from "./GameStorage.js";
 import {Player} from "./Player.js";
+import {Application} from "./Application";
 
 export class Game {
     static COLORS = ['green', 'yellow', 'blue', 'red', 'orange'];
     static TOTAL_JOKERS = 8;
-
-    static STATE = {
-        LEVEL_SELECT: 'levelSelect',
-        IN_GAME: 'inGame'
-    };
 
     Lobby;
     Level;
@@ -29,7 +25,7 @@ export class Game {
         this.Player = new Player();
 
         socket.on('game:start', () => {
-            this.start();
+            dispatch(EVENTS.GAME_START);
         });
 
         socket.on('lobby:updated', ({lobby}) => {
@@ -44,7 +40,6 @@ export class Game {
         });
 
         socket.on('connect', () => {
-            console.clear();
             this.initialize();
         });
 
@@ -58,6 +53,9 @@ export class Game {
             // Level is loaded, state is created, now we need to go
             // ahead and render the game
             this.continue();
+        });
+        listen(EVENTS.SCORE_TOGGLE_COLUMN, ({element, row, column}) => {
+            this.updateState(column, row, 'state', Score.getColumnScoreState(element), 'score');
         });
     }
 
@@ -92,8 +90,7 @@ export class Game {
     start() {
         if (!this.state) {
             // No state, select a level first.
-            //this.new();
-            this.Level.select({Player: this.Player, Lobby: this.Lobby});
+            //this.Level.select({Player: this.Player, Lobby: this.Lobby});
         } else {
             this.continue();
         }
@@ -102,6 +99,7 @@ export class Game {
     new() {
         // Reset state, continue game
         this.resetState();
+        Application.navigateTo('levelSelect');
         // Continue rendering the newly created level
         this.start();
     }
@@ -109,6 +107,7 @@ export class Game {
     continue() {
         this.state = GameStorage.getItem('state');
         // Load state from localstorage and trigger events to render level
+        Application.navigateTo('gameView')
         dispatch(EVENTS.RENDER_LEVEL);
     }
 

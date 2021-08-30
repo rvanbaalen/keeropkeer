@@ -34,7 +34,7 @@ export class Player {
             Player.setPlayerTotalDom({totalPlayers});
         });
 
-        socket.on('player:connected', (player) => {
+        socket.on('player:connected', ({player}) => {
             Notify.show({
                 title: language.notification.playerJoined.title,
                 message: language.notification.playerJoined.message(player.username),

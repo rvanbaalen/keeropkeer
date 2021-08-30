@@ -115,25 +115,28 @@ const EVENTS = {
     GRID_RENDER_COMPLETE: 'grid-render-complete',
     JOKER_SELECTED: 'joker-selected',
     STAR_SELECTED: 'star-selected',
-    RENDER_JOKER_SCORE: 'render-joker-score',
-    RENDER_BONUS_SCORE: 'render-bonus-score',
-    RENDER_COLUMN_SCORE: 'render-column-score',
-    RENDER_STAR_SCORE: 'render-star-score',
     RENDER_TOTAL_SCORE: 'render-total-score',
     RENDER_LEVEL: 'render-level',
     RENDER_SCORES: 'render-scores',
     LOADING: 'loading',
     LEVEL_SELECT_DOM: 'level-select-dom',
+    SCORE_TOGGLE_COLUMN: 'score-toggle-column',
+    NAVIGATE_FROM: 'navigate-from',
+    NAVIGATE_TO: 'navigate-to',
+    NAVIGATE: 'navigate'
+
 };
 
 const app = $('app');
 const register = {};
 
-function dispatch$1(eventName, eventData) {
+function dispatch(eventName, eventData) {
+    console.info('Fired event: ' + eventName, eventData);
     let event = new CustomEvent(eventName, { detail: eventData });
     app.dispatchEvent(event);
 
     if (register[eventName]?.once) {
+        console.log('remove listener for ', eventName);
         app.removeEventListener(eventName, register[eventName].callback, false);
     }
 }
@@ -144,14 +147,17 @@ function listen(eventName, callback, once = false) {
         register[eventName] = {once: true, callback};
     }
 }
-function listenOnce(eventName, callback) {
-    return listen(eventName, callback, true);
-}
 
-const SOCKET_SERVER = 'https://dry-peak-80209.herokuapp.com/' ;
+const SOCKET_SERVER = 'http://192.168.1.111:3000/';
 
 const io = window.io;
 const socket = io(SOCKET_SERVER, { autoConnect: false });
+
+socket.onAny((event, ...args) => {
+    console.log(event, args);
+});
+
+console.log('Setup socket server ', SOCKET_SERVER);
 
 function registerModalEvents() {
     listen(EVENTS.MODAL_TOGGLE, event => {
@@ -172,80 +178,6 @@ function registerModalEvents() {
             $(modalId).classList.add('show');
         }
     });
-}
-
-function createLevelSelectModal({modalId, Player, Lobby, Level}) {
-    // Create new modal and add it to the DOM
-    let {selectedLevel} = Level;
-
-    createNewModal({
-        id: modalId,
-        visible: false,
-        message: false,
-        body: `
-                <div class="new-game-container">
-                    <div class="lobby-container">
-                        <ul>
-                            <li id="playerNameWrap">Player: <span id="playerName">${Player.name}</span></li>
-                            <li id="lobbyWrap">Game code: <span id="lobbyCode">${Lobby.code}</span></li>
-                            <li id="playersJoinedWrap">Players joined (<span id="playerTotal">${Lobby.players.length}</span>): <span id="playerNames">${Lobby.playerNames}</span></li>
-                            <li id="startGameWrap"><button id="start">Start game</button></li>
-                        </ul>
-                    </div>
-                    <div class="level-image-container">
-                        <a href="#">
-                            <span>Level 1</span>
-                            <img src="/images/level1.png" alt="Level 1" class="level-image" id="level1">
-                        </a>
-                        <a href="#">
-                            <span>Level 2</span>
-                            <img src="/images/level2.png" alt="Level 2" class="level-image" id="level2">
-                        </a>
-                        <a href="#">
-                            <span>Level 3</span>
-                            <img src="/images/level3.png" alt="Level 3" class="level-image" id="level3">
-                        </a>
-                        <a href="#">
-                            <span>Level 4</span>
-                            <img src="/images/level4.png" alt="Level 4" class="level-image" id="level4">
-                        </a>
-                    </div>
-                </div>
-            `,
-        buttons: false
-    });
-
-    listenOnce(EVENTS.MODAL_SHOW, (event) => {
-        if (modalId === event.detail.modalId && selectedLevel) {
-            if (selectedLevel) {
-                // If there's a selected level, mark it in the dom
-                dispatch$1(EVENTS.LEVEL_SELECT_DOM, {level: selectedLevel});
-            } else {
-                // if not, make sure the local state reflects that.
-                dispatch$1(EVENTS.LEVEL_SELECT_DOM, {level: ''});
-            }
-        }
-    });
-
-    forEachQuery('.level-image-container a', level => {
-        level.addEventListener('click', (event) => {
-            event.preventDefault();
-            selectedLevel = event.target.id;
-            dispatch$1(EVENTS.LEVEL_SELECT_DOM, {level: selectedLevel, element: event.target});
-            socket.emit('level:select', {selectedLevel});
-
-        }, false);
-    });
-
-    $('start').addEventListener('click',(event) => {
-        event.preventDefault();
-        if ($('app').querySelectorAll('.level-image-container a.selected').length === 0) {
-            alert(language.notification.selectLevel);
-            return false;
-        }
-
-        dispatch$1(EVENTS.GAME_START);
-    }, false);
 }
 
 function createNewModal(options) {
@@ -317,7 +249,7 @@ function createNewGameModal({modalId = 'newGameModal'}) {
                 label: language.label.cancel,
                 callback(event) {
                     event.preventDefault();
-                    dispatch$1(EVENTS.MODAL_TOGGLE, {modalId});
+                    dispatch(EVENTS.MODAL_TOGGLE, {modalId});
                 }
             },
             ok: {
@@ -326,9 +258,9 @@ function createNewGameModal({modalId = 'newGameModal'}) {
                 callback(event) {
                     event.preventDefault();
                     // hide the modal first
-                    dispatch$1(EVENTS.MODAL_TOGGLE, {modalId});
+                    dispatch(EVENTS.MODAL_TOGGLE, {modalId});
                     // Reset the game
-                    dispatch$1(EVENTS.GAME_NEW);
+                    dispatch(EVENTS.GAME_NEW);
                 }
             }
         }
@@ -447,6 +379,87 @@ class GameStorage {
     }
 }
 
+class Layout {
+    static render() {
+        return `
+            ${ Layout.renderViewGame() }
+            ${ Layout.renderViewLevelSelect() }
+        `;
+    }
+
+    static renderViewGame() {
+        return `
+            <div id="gameView" class="applicationWindow hidden">
+                <div class="gameViewRows">
+                    <div class="columns">
+                        <div class="jokers" id="jokerContainer"></div>
+                        <div id="blockGrid"></div>
+                        <div class="scoreContainer">
+                            <div class="column" id="scoreColumn">
+                                <div id="scoreColumn1"></div>
+                            </div>
+                            <div class="column" id="scoreColumn2"></div>
+                        </div>
+                    </div>
+                    <div id="gameData">
+                        <ul id="activePlayers" class="blockList playerList"></ul>
+                        <a id="newGameButton">Nieuw spel</a>
+                    </div>
+                </div>
+            </div>
+       `;
+    }
+
+    static renderViewLevelSelect() {
+        return `
+            <div id="levelSelect" class="applicationWindow hidden">
+                <div id="playerContainer">
+                    <h2 class="rainbow">Spelers</h2>
+                    <ul id="players" class="blockList playerList"></ul>
+                    <h2 class="rainbow">Lobby</h2>
+                    <a href="#" id="lobbyCode">Cool</a>
+                </div>
+                <div id="levelContainer">
+                    <h2 class="rainbow">Selecteer een level</h2>
+                    <ul id="levels" class="blockList">
+                        <li class="level">
+                            <a href="#" class="level1" data-level="level1">
+                                <img src="/images/level1.png" alt="level1" />
+                                <span class="label">Level 1</span>
+                            </a>
+                        </li>
+                        <li class="level">
+                            <a href="#" class="level2" data-level="level2">
+                                <img src="/images/level2.png" alt="level2" />
+                                <span class="label">Level 2</span>
+                            </a>
+                        </li>
+                        <li class="level">
+                            <a href="#" class="level3" data-level="level3">
+                                <img src="/images/level3.png" alt="level3" />
+                                <span class="label">Level 3</span>
+                            </a>
+                        </li>
+                        <li class="level">
+                            <a href="#" class="level4" data-level="level4">
+                                <img src="/images/level4.png" alt="level4" />
+                                <span class="label">Level 4</span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        `;
+    }
+
+    static renderPlayer(player) {
+        return `<li class="player" data-player="${player.username}" data-player-id="${player.id}">${player.username}</li>`;
+    }
+    static renderPlayerAvatar({url, playerName}) {
+        return `<img src="${url}" alt="${playerName}"/><span>${playerName}</span>`;
+    }
+}
+
 class Lobby {
     #lobby = false;
     state = false;
@@ -460,7 +473,6 @@ class Lobby {
 
         socket.on('lobby:updated', ({lobby}) => {
             this.lobby = lobby;
-            Lobby.setLobbyCodeDom({code: this.lobby.code});
         });
 
         socket.once('lobby:joined', ({lobby}) => {
@@ -469,6 +481,46 @@ class Lobby {
 
         socket.once('lobby:created', ({lobby}) => {
             this.lobby = lobby;
+        });
+
+        socket.on('player:connected', ({player}) => {
+            Lobby.addPlayerToLobby(player);
+        });
+
+        socket.on('player:disconnected', ({player}) => {
+            Lobby.removePlayerFromLobby(player);
+        });
+    }
+
+    static loadAvatars() {
+        forEachQuery('#players .player:not(.avatar), #activePlayers .player:not(.avatar)', player => {
+            const playerName = player.innerText;
+            const url = new URL(`https://avatars.dicebear.com/api/bottts/${playerName}.svg?mood[]=happy`);
+            player.innerHTML = Layout.renderPlayerAvatar({url, playerName});
+            player.classList.add('avatar');
+        });
+    }
+
+    static addPlayerToLobby(player) {
+        forEachQuery('#players, #activePlayers', playerContainer => {
+            playerContainer.innerHTML += Layout.renderPlayer(player);
+        });
+        Lobby.loadAvatars();
+    }
+
+    static removePlayerFromLobby(playerObject) {
+        let player = (typeof playerObject === 'string') ? playerObject : playerObject.username;
+        forEachQuery(`li[data-player="${player}"]`, element => {
+            element.remove();
+        });
+    }
+
+    static setPlayers(players) {
+        forEachQuery('#players, #activePlayers', playerContainer => {
+            playerContainer.innerHTML = '';
+        });
+        players.forEach(player => {
+            Lobby.addPlayerToLobby(player);
         });
     }
 
@@ -533,6 +585,11 @@ class Lobby {
         if (newLobby.code !== this.#lobby.code) {
             // Store the new value in the local storage as well.
             GameStorage.setItem('lobby', newLobby.code);
+        }
+
+        Lobby.setLobbyCodeDom({code: newLobby.code});
+        if (newLobby.players.length > 0) {
+            Lobby.setPlayers(newLobby.players);
         }
 
         this.#lobby = newLobby;
@@ -2659,31 +2716,50 @@ class Level {
             const {level, element} = event.detail;
             Level.selectInDom(level, element);
         });
-        listen(EVENTS.GAME_START, () => {
-            dispatch$1(EVENTS.MODAL_HIDE, {modalId: 'selectLevelModal'});
-        });
 
         socket.on('level:selected', ({selectedLevel}) => {
             this.level = selectedLevel;
-            dispatch$1(EVENTS.GAME_CREATE_STATE);
+            dispatch(EVENTS.GAME_CREATE_STATE);
         });
+
+        this.registerEventHandlers();
     }
 
     static selectInDom(level, element = false) {
-        forEachQuery('.level-image-container a', level => {
-            level.classList.remove('selected');
+        const levels = document.querySelectorAll('#levels .level a');
+        const levelElement = document.querySelectorAll('#levels .level a.' + level)[0];
+
+        // Clear state
+        Array.prototype.forEach.call(levels, (lvl) => {
+            lvl.classList.remove('selected');
+            document.getElementById('startGame')?.remove();
         });
 
-        if (level !== '') {
-            if (!element) {
-                element = $(level);
-            }
-            if (!element) {
-                return;
-            }
-
-            element.parentElement.classList.add('selected');
+        if (levelElement) {
+            // Set new state if element exists.
+            levelElement.classList.toggle('selected');
+            levelElement.innerHTML += `<span id="startGame">Start Spel &rarr;</span>`;
         }
+    }
+
+    registerEventHandlers() {
+        const levels = document.querySelectorAll('li.level > a');
+        Array.prototype.forEach.call(levels, (level) => {
+            level.addEventListener('click', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+
+                const selectedLevel = level.dataset.level;
+                if (level.classList.contains('selected')) {
+                    // Start the game!
+                    socket.emit('game:start');
+                    //dispatch(EVENTS.GAME_START);
+                } else {
+                    dispatch(EVENTS.LEVEL_SELECT_DOM, {level: selectedLevel});
+                    socket.emit('level:select', {selectedLevel});
+                }
+            }, false);
+        });
     }
 
     reset() {
@@ -2692,22 +2768,12 @@ class Level {
     }
 
     select({Player, Lobby}) {
-        const modalId = 'selectLevelModal';
-
-        // Check if modal already exists in the DOM
-        if ($(modalId)) {
-            // Show modal
-            dispatch$1(EVENTS.MODAL_SHOW, {modalId: modalId});
-            return;
-        }
-
-        createLevelSelectModal({modalId, Player, Lobby, Level: this});
-        dispatch$1(EVENTS.MODAL_SHOW, {modalId});
+        dispatch(EVENTS.NAVIGATE, {page: 'levelSelect'});
     }
 
     set level(level) {
         this.selectedLevel = level;
-        dispatch$1(EVENTS.LEVEL_SELECT_DOM, {level});
+        dispatch(EVENTS.LEVEL_SELECT_DOM, {level});
     }
 
     get level() {
@@ -2737,9 +2803,30 @@ class Score {
                 }
             });
         });
-        listen(EVENTS.SCORE_TOTAL_TOGGLE, () => {
-            this.toggleTotalScore();
+        listen(EVENTS.SCORE_TOTAL_TOGGLE, () => this.toggleTotalScore());
+
+        socket.on('grid:column-completed', ({columnLetter, player, first}) => {
+            const row = first ? 0 : 1;
+            const el = document.querySelectorAll(`.column-score[data-column="${columnLetter}"][data-row="${row}"]`)[0];
+            if (el) {
+                dispatch(EVENTS.SCORE_TOGGLE_COLUMN, {element: el, row, column: columnLetter});
+                dispatch(EVENTS.SCORE_RELOAD);
+            }
         });
+    }
+
+    static getColumnScoreState(element) {
+        if (!element) {
+            return "default";
+        }
+
+        if (!element.classList.contains('active') && !element.classList.contains('taken')) {
+            return 'active';
+        } else if (element.classList.contains('active') && !element.classList.contains('taken')) {
+            return 'taken';
+        }
+
+        return 'default';
     }
 
     get total() {
@@ -2788,13 +2875,41 @@ class Score {
     }
 
     toggleTotalScore() {
-        let element = $('totalScore');
+        const element = $('totalScore');
         if (element.classList.contains('hide')) {
-            element.innerText = this.total;
             element.classList.remove('hide');
+            this.renderTotalScore();
         } else {
             element.innerText = '';
             element.classList.add('hide');
+        }
+    }
+
+    renderBonusScore(value) {
+        $('bonusTotal').innerText = value;
+        this.renderTotalScore();
+    }
+
+    renderColumnScore(value) {
+        $('columnsTotal').innerText = value;
+        this.renderTotalScore();
+    }
+
+    renderJokerScore(value) {
+        $('jokerTotal').innerText = value;
+        this.renderTotalScore();
+    }
+
+    renderStarScore(value) {
+        $('starsTotal').innerText = value;
+        this.renderTotalScore();
+    }
+
+    renderTotalScore() {
+        const el = $('totalScore');
+        if (!el.classList.contains('hide')) {
+            console.log('set total', this.total);
+            el.innerText = this.total;
         }
     }
 }
@@ -2841,7 +2956,7 @@ class Player {
             Player.setPlayerTotalDom({totalPlayers});
         });
 
-        socket.on('player:connected', (player) => {
+        socket.on('player:connected', ({player}) => {
             Notify.show({
                 title: language.notification.playerJoined.title,
                 message: language.notification.playerJoined.message(player.username),
@@ -2914,14 +3029,46 @@ class Player {
     }
 }
 
+class Application {
+    currentView;
+    defaultView = 'levelSelect';
+    constructor() {
+        this.currentView = document.querySelectorAll('.applicationWindow:not(.hidden)')[0];
+
+        if (!this.currentView) {
+            this.navigate(this.defaultView);
+        }
+
+        listen(EVENTS.NAVIGATE, (event) => {
+            const {page} = event.detail;
+            if ($(page)) {
+                this.navigate(page);
+            }
+        });
+    }
+
+    hideCurrent() {
+        if (this.currentView) {
+            dispatch(EVENTS.NAVIGATE_FROM, {page: this.currentView});
+            this.currentView.classList.add('hidden');
+        }
+    }
+
+    navigate(page) {
+        this.hideCurrent();
+        this.currentView = $(page);
+        this.currentView.classList.remove('hidden');
+        dispatch(EVENTS.NAVIGATE_TO, {page: this.currentView});
+    }
+
+    static navigateTo(page) {
+        dispatch(EVENTS.NAVIGATE, {page});
+    }
+}
+
 class Game {
     static COLORS = ['green', 'yellow', 'blue', 'red', 'orange'];
     static TOTAL_JOKERS = 8;
-
-    static STATE = {
-        LEVEL_SELECT: 'levelSelect',
-        IN_GAME: 'inGame'
-    };
 
     Lobby;
     Level;
@@ -2937,7 +3084,7 @@ class Game {
         this.Player = new Player();
 
         socket.on('game:start', () => {
-            this.start();
+            dispatch(EVENTS.GAME_START);
         });
 
         socket.on('lobby:updated', ({lobby}) => {
@@ -2946,7 +3093,6 @@ class Game {
         });
 
         socket.on('connect', () => {
-            console.clear();
             this.initialize();
         });
 
@@ -2960,6 +3106,9 @@ class Game {
             // Level is loaded, state is created, now we need to go
             // ahead and render the game
             this.continue();
+        });
+        listen(EVENTS.SCORE_TOGGLE_COLUMN, ({element, row, column}) => {
+            this.updateState(column, row, 'state', Score.getColumnScoreState(element), 'score');
         });
     }
 
@@ -2992,11 +3141,7 @@ class Game {
     }
 
     start() {
-        if (!this.state) {
-            // No state, select a level first.
-            //this.new();
-            this.Level.select({Player: this.Player, Lobby: this.Lobby});
-        } else {
+        if (!this.state) ; else {
             this.continue();
         }
     }
@@ -3004,6 +3149,7 @@ class Game {
     new() {
         // Reset state, continue game
         this.resetState();
+        Application.navigateTo('levelSelect');
         // Continue rendering the newly created level
         this.start();
     }
@@ -3011,7 +3157,8 @@ class Game {
     continue() {
         this.state = GameStorage.getItem('state');
         // Load state from localstorage and trigger events to render level
-        dispatch$1(EVENTS.RENDER_LEVEL);
+        Application.navigateTo('gameView');
+        dispatch(EVENTS.RENDER_LEVEL);
     }
 
     resetState() {
@@ -3077,7 +3224,7 @@ class Game {
 
         if (found) {
             this.state = currentState;
-            dispatch$1(EVENTS.RENDER_LEVEL);
+            dispatch(EVENTS.RENDER_LEVEL);
         }
     }
 
@@ -3093,7 +3240,7 @@ class Game {
 
         if (found) {
             this.state = currentState;
-            dispatch$1(EVENTS.RENDER_LEVEL);
+            dispatch(EVENTS.RENDER_LEVEL);
         }
     }
 
@@ -3109,7 +3256,7 @@ class Game {
 
         if (found) {
             this.state = currentState;
-            dispatch$1(EVENTS.RENDER_LEVEL);
+            dispatch(EVENTS.RENDER_LEVEL);
         }
     }
 
@@ -3125,15 +3272,19 @@ class Game {
 
         if (found) {
             this.state = currentState;
-            dispatch$1(EVENTS.RENDER_LEVEL);
+            dispatch(EVENTS.RENDER_LEVEL);
         }
     }
 }
 
 class Engine {
     currentGame = false;
+    application;
     version;
     constructor() {
+        $('app').innerHTML += Layout.render();
+        this.application = new Application();
+
         registerModalEvents();
 
         this.currentGame = new Game();
@@ -3143,28 +3294,29 @@ class Engine {
         $('connecting-message').innerText = language.messages.connecting;
 
         listen(EVENTS.LOADING, () => {
-            dispatch$1(EVENTS.MODAL_SHOW, {modalId: 'genericLoading'});
+            dispatch(EVENTS.MODAL_SHOW, {modalId: 'genericLoading'});
         });
         listen(EVENTS.RENDER_LEVEL, () => {
             this.render();
         });
-        listen(EVENTS.RENDER_JOKER_SCORE, (event) => {
-            this.renderJokerScore(event.detail.value);
-        });
         listen(EVENTS.RENDER_SCORES, (event) => {
-            const {scores} = event.detail;
+            const {scores} = event.detail, Score = this.currentGame.Score;
             if (typeof scores.bonus !== 'undefined') {
-                this.renderBonusScore(scores.bonus);
+                Score.renderBonusScore(scores.bonus);
             }
             if (typeof scores.columns !== 'undefined') {
-                this.renderColumnScore(scores.columns);
+                Score.renderColumnScore(scores.columns);
             }
             if (typeof scores.jokers !== 'undefined') {
-                this.renderJokerScore(scores.jokers);
+                Score.renderJokerScore(scores.jokers);
             }
             if (typeof scores.stars !== 'undefined') {
-                this.renderStarScore(scores.stars);
+                Score.renderStarScore(scores.stars);
             }
+        });
+
+        socket.on('grid:column-completed', ({columnLetter, player}) => {
+
         });
 
         socket.on('version', version => {
@@ -3183,22 +3335,6 @@ class Engine {
         });
     }
 
-    renderBonusScore(value) {
-        $('bonusTotal').innerText = value;
-    }
-
-    renderColumnScore(value) {
-        $('columnsTotal').innerText = value;
-    }
-
-    renderJokerScore(value) {
-        $('jokerTotal').innerText = value;
-    }
-
-    renderStarScore(value) {
-        $('starsTotal').innerText = value;
-    }
-
     parseOrientationOverlay() {
         createNewModal({
             id: 'orientationModal',
@@ -3215,21 +3351,25 @@ class Engine {
     }
 
     parseColumnGrid(state) {
-        $('blockGrid').innerHTML = '';
+        const blockGrid = $('blockGrid');
+        blockGrid.innerHTML = '';
         state.grid.forEach(column => {
-            $('blockGrid').append(this.parseColumn(column));
+            blockGrid.innerHTML += this.parseColumn(column);
         });
 
         // Colored blocks
         let scoreBlocks = document.querySelectorAll('.score-block:not(.final-score)');
         Array.prototype.forEach.call(scoreBlocks, (block) => {
-            block.addEventListener('click', () => {
+            block.addEventListener('click', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+
                 let selected = !block.classList.contains('selected');
-                this.currentGame.updateBlockState(block.data.column, block.data.row, 'selected', selected);
-                dispatch$1(EVENTS.GRID_BLOCK_SELECTED, {selected, block});
+                this.currentGame.updateBlockState(block.dataset.column, block.dataset.row, 'selected', selected);
+                dispatch(EVENTS.GRID_BLOCK_SELECTED, {selected, block});
                 if (block.querySelectorAll('.star').length > 0) {
                     // Has a star, update star score.
-                    dispatch$1(EVENTS.STAR_SELECTED, {selected, block});
+                    dispatch(EVENTS.STAR_SELECTED, {selected, block});
                 }
             }, false);
         });
@@ -3237,39 +3377,45 @@ class Engine {
 
     parseJokerColumn(state) {
         let jokerContainer = $('jokerContainer');
-        jokerContainer.innerHTML = '';
-        state.jokers.forEach(joker => {
-            let renderedJoker = createElement('span', {className: 'joker', innerText: '!'});
-            if (joker.selected) {
-                renderedJoker.classList.add('used');
-            }
-            jokerContainer.append(renderedJoker);
-        });
+        jokerContainer.innerHTML = state.jokers.map(joker => {
+            return `<span class="joker${joker.selected ? ' used' : ''}">!</span>`
+        }).join('');
 
         // Joker events
         let jokers = document.getElementsByClassName('joker');
         Array.prototype.forEach.call(jokers, (joker, index) => {
-            joker.addEventListener('click', () => {
+            joker.addEventListener('click', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+
                 let selected = !joker.classList.contains('used');
                 this.currentGame.updateJokerState(index, selected);
-                dispatch$1(EVENTS.JOKER_SELECTED, {joker, selected});
+                dispatch(EVENTS.JOKER_SELECTED, {joker, selected});
             }, false);
         });
     }
 
     parseScoreColumns(state) {
-        $('scoreColumn1').innerHTML = '';
-        state.colorScores.high.forEach(colorScore => {
-            let element = createElement('span', {className: 'score-block final-score ' + colorScore.color});
-            if (colorScore.value === -1) {
-                element.classList.add('selected');
-            }
-            if (colorScore.value === 5) {
-                element.classList.add('final-selected');
-            }
-            createElement('span', {innerText: 5}, element);
-            $('scoreColumn1').append(element);
-        });
+        $('scoreColumn1').innerHTML = state.colorScores.high.map(colorScore => {
+            const valueClass = (value) => {
+                if (value === -1) return ' selected';
+                if (value === 5) return ' final-selected';
+                return '';
+            };
+
+            return `<span class="score-block final-score ${colorScore.color}${valueClass(colorScore.value)}"><span>5</span></span>`;
+        }).join('');
+        // state.colorScores.high.forEach(colorScore => {
+        //     let element = createElement('span', {className: 'score-block final-score ' + colorScore.color});
+        //     if (colorScore.value === -1) {
+        //         element.classList.add('selected');
+        //     }
+        //     if (colorScore.value === 5) {
+        //         element.classList.add('final-selected');
+        //     }
+        //     createElement('span', {innerText: 5}, element);
+        //     $('scoreColumn1').append(element);
+        // });
 
         $('scoreColumn2').innerHTML = '';
         state.colorScores.low.forEach(colorScore => {
@@ -3310,45 +3456,47 @@ class Engine {
         };
         let highScores = document.querySelectorAll('#scoreColumn1 .final-score');
         Array.prototype.forEach.call(highScores, (highScore) => {
-            highScore.addEventListener('click', () => {
+            highScore.addEventListener('click', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+
                 this.currentGame.updateColorScoreState(
                     'high',
                     getColorFromElement(highScore),
                     getValueFromClass(highScore, 5, -1)
                 );
 
-                dispatch$1(EVENTS.SCORE_RELOAD);
+                dispatch(EVENTS.SCORE_RELOAD);
             }, false);
         });
         let lowScores = document.querySelectorAll('#scoreColumn2 .final-score');
         Array.prototype.forEach.call(lowScores, (lowScore) => {
-            lowScore.addEventListener('click', () => {
+            lowScore.addEventListener('click', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+
                 this.currentGame.updateColorScoreState(
                     'low',
                     getColorFromElement(lowScore),
                     getValueFromClass(lowScore, 3, -1)
                 );
 
-                dispatch$1(EVENTS.SCORE_RELOAD);
+                dispatch(EVENTS.SCORE_RELOAD);
             }, false);
         });
 
         // Column scores
         let columnScores = document.querySelectorAll('span.column-score');
         Array.prototype.forEach.call(columnScores, (columnScore) => {
-            columnScore.addEventListener('click', () => {
-                let col = columnScore.data.column, row = columnScore.data.row, state;
+            columnScore.addEventListener('click', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
 
-                if (!columnScore.classList.contains('active') && !columnScore.classList.contains('taken')) {
-                    state = 'active';
-                } else if (columnScore.classList.contains('active') && !columnScore.classList.contains('taken')) {
-                    state = 'taken';
-                } else {
-                    state = 'default';
-                }
-
-                this.currentGame.updateState(col, row, 'state', state, 'score');
-                dispatch$1(EVENTS.SCORE_RELOAD);
+                dispatch(EVENTS.SCORE_TOGGLE_COLUMN, {
+                    column: columnScore.dataset.column,
+                    element: columnScore
+                });
+                dispatch(EVENTS.SCORE_RELOAD);
             }, false);
         });
     }
@@ -3358,7 +3506,7 @@ class Engine {
         this.parseJokerColumn(this.currentGame.state);
         this.parseScoreColumns(this.currentGame.state);
 
-        dispatch$1(EVENTS.GRID_RENDER_COMPLETE);
+        dispatch(EVENTS.GRID_RENDER_COMPLETE);
     }
 
     parseTotalScores() {
@@ -3368,7 +3516,7 @@ class Engine {
 
         const totalScoresTemplate = `
             <div id="totalScores">
-                <div class="totals" id="bonus"><label>${language.label.bonus}</label><span class="label">=</span><span id="bonusTotal" class="totalValue">15</span></div>
+                <div class="totals" id="bonus"><label class="rainbow">${language.label.bonus}</label><span class="label">=</span><span id="bonusTotal" class="totalValue">15</span></div>
                 <div class="totals" id="columns"><label>${language.label.columns}</label><span class="label">+</span><span id="columnsTotal" class="totalValue"></span></div>
                 <div class="totals" id="jokers"><label>${language.label.jokers}</label><span class="label">+</span><span id="jokerTotal" class="totalValue"></span></div>
                 <div class="totals" id="stars"><label>${language.label.stars}</label><span class="label">-</span><span id="starsTotal" class="totalValue"></span></div>
@@ -3378,15 +3526,18 @@ class Engine {
             </div>
         `;
 
-        $('scoreColumn').append(renderTemplate(totalScoresTemplate));
+        $('scoreColumn').innerHTML += totalScoresTemplate;
 
-        $('totals').addEventListener('click', () => {
-            dispatch$1(EVENTS.SCORE_SHOW);
+        $('totals').addEventListener('click', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+
+            dispatch(EVENTS.SCORE_TOTAL_TOGGLE);
         }, false);
     }
 
     renderNewGameButton(callback) {
-        const id = 'newGame';
+        const id = 'newGameButton';
         if ($(id)) {
             return;
         }
@@ -3398,7 +3549,7 @@ class Engine {
         });
 
         // New game button
-        $('grid').append(button);
+        $('gameView').append(button);
 
         return button;
     }
@@ -3408,61 +3559,55 @@ class Engine {
         this.parseTotalScores();
 
         const modalId = 'newGameModal';
-        createNewGameModal({modalId});
+        if (!$(modalId)) {
+            createNewGameModal({modalId});
+        }
+
         this.renderNewGameButton((event) => {
             event.preventDefault();
-            dispatch$1(EVENTS.MODAL_SHOW, {modalId});
+            dispatch(EVENTS.MODAL_SHOW, {modalId});
         });
 
-        dispatch$1(EVENTS.SCORE_RELOAD);
+        dispatch(EVENTS.SCORE_RELOAD);
     }
 
     parseColumn(column) {
-        let columnTemplate = createElement('div', {className: 'column' + (column.column === 'H' ? ' highlight' : '')});
-        // create header
-        createElement('span', {className: 'letter rounded-block', innerText: column.column}, columnTemplate);
+        let blocks = column.grid.length, selectedBlocks = 0;
+
+        let tpl = `
+            <div class="column${column.column === 'H' ? ' highlight' : ''}">
+                <span class="rounded-block" data-letter="${column.column}">${column.column}</span>
+                ${renderColumnBlocks(column.grid)}
+                <div class="column-score">${renderColumnScores(column.score)}</div>
+            </div>
+        `;
 
         // create grid blocks
-        column.grid.forEach((block, index) => {
-            const row = createElement('span', {
-                className: 'score-block ' + block.color,
-                data: {
-                    column: column.column,
-                    row: index
-                }
-            });
-            if (block.star) {
-                createElement('span', {className: 'star', innerText: '*'}, row);
-            }
-            if (block.selected) {
-                row.classList.add('selected');
-            }
+        function renderColumnBlocks(blocks) {
+            return blocks.map((block, index) => {
+                if (block.selected) selectedBlocks++;
 
-            columnTemplate.append(row);
-        });
+                return `
+                    <span class="score-block${block.selected ? ' selected' : ''} ${block.color}" data-column="${column.column}" data-row="${index}">
+                        ${block.star ? `<span class="star">*</span>` : ``}
+                    </span>
+                `;
+            }).join('');
+        }
         // create score columns
-        let score = createElement('div', {className: 'column-score'});
-        column.score.forEach((scoreObject, index) => {
-            let state = (scoreObject.state && scoreObject.state !== 'default') ? ' ' + scoreObject.state : '';
-            createElement('span', {
-                className: 'rounded-block column-score' + state,
-                innerText: scoreObject.value,
-                data: {
-                    column: column.column,
-                    row: index
-                }
-            }, score);
-        });
-        columnTemplate.append(score);
-
-        let blocks = columnTemplate.querySelectorAll('.score-block');
-        let selectedBlocks = columnTemplate.querySelectorAll('.selected');
-        let columnLetter = columnTemplate.querySelector('.letter').innerText.toUpperCase();
-        if (blocks.length === selectedBlocks.length) {
-            socket.emit('grid:column-complete', {columnLetter});
+        //let score = createElement('div', {className: 'column-score'});
+        function renderColumnScores(scores) {
+            return scores.map((scoreObject, index) => {
+                let state = (scoreObject.state && scoreObject.state !== 'default') ? ' ' + scoreObject.state : '';
+                return `<span class="rounded-block column-score${state}" data-column="${column.column}" data-row="${index}">${scoreObject.value}</span>`;
+            }).join('');
         }
 
-        return columnTemplate;
+        if (blocks === selectedBlocks) {
+            socket.emit('grid:column-complete', {columnLetter: column.column});
+        }
+
+        return tpl;
     }
 }
 
@@ -3471,5 +3616,3 @@ try {
 } catch (err) {
     console.error('Failed to load game. Reset state!', err);
 }
-
-window.socket = socket;

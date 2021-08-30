@@ -2067,31 +2067,50 @@ export class Level {
             const {level, element} = event.detail;
             Level.selectInDom(level, element);
         });
-        listen(EVENTS.GAME_START, () => {
-            dispatch(EVENTS.MODAL_HIDE, {modalId: 'selectLevelModal'});
-        })
 
         socket.on('level:selected', ({selectedLevel}) => {
             this.level = selectedLevel;
             dispatch(EVENTS.GAME_CREATE_STATE);
         });
+
+        this.registerEventHandlers();
     }
 
     static selectInDom(level, element = false) {
-        forEachQuery('.level-image-container a', level => {
-            level.classList.remove('selected');
+        const levels = document.querySelectorAll('#levels .level a');
+        const levelElement = document.querySelectorAll('#levels .level a.' + level)[0];
+
+        // Clear state
+        Array.prototype.forEach.call(levels, (lvl) => {
+            lvl.classList.remove('selected');
+            document.getElementById('startGame')?.remove();
         });
 
-        if (level !== '') {
-            if (!element) {
-                element = $(level);
-            }
-            if (!element) {
-                return;
-            }
-
-            element.parentElement.classList.add('selected');
+        if (levelElement) {
+            // Set new state if element exists.
+            levelElement.classList.toggle('selected');
+            levelElement.innerHTML += `<span id="startGame">Start Spel &rarr;</span>`;
         }
+    }
+
+    registerEventHandlers() {
+        const levels = document.querySelectorAll('li.level > a');
+        Array.prototype.forEach.call(levels, (level) => {
+            level.addEventListener('click', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+
+                const selectedLevel = level.dataset.level;
+                if (level.classList.contains('selected')) {
+                    // Start the game!
+                    socket.emit('game:start');
+                    //dispatch(EVENTS.GAME_START);
+                } else {
+                    dispatch(EVENTS.LEVEL_SELECT_DOM, {level: selectedLevel});
+                    socket.emit('level:select', {selectedLevel});
+                }
+            }, false);
+        });
     }
 
     reset() {
@@ -2100,17 +2119,7 @@ export class Level {
     }
 
     select({Player, Lobby}) {
-        const modalId = 'selectLevelModal';
-
-        // Check if modal already exists in the DOM
-        if ($(modalId)) {
-            // Show modal
-            dispatch(EVENTS.MODAL_SHOW, {modalId: modalId});
-            return;
-        }
-
-        createLevelSelectModal({modalId, Player, Lobby, Level: this});
-        dispatch(EVENTS.MODAL_SHOW, {modalId});
+        dispatch(EVENTS.NAVIGATE, {page: 'levelSelect'})
     }
 
     set level(level) {

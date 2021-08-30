@@ -1,0 +1,22 @@
+.applicationWindow {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    color: #fff;
+    position: absolute;
+    z-index: 10;
+    opacity: 1;
+    transition: opacity .5s ease-in-out;
+    align-items: center;
+}
+.applicationWindow.hidden {
+    z-index: 1;
+    opacity: 0;
+    pointer-events: none;
+}
+.applicationWindow h2 {
+    margin: 10px 0 10px;
+}
+.applicationWindow > div {
+    margin-top: 10px;
+}

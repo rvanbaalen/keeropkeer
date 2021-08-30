@@ -1,5 +1,6 @@
 import {$} from "./utilities.js";
-import {EVENTS, listen} from "./events.js";
+import {dispatch, EVENTS, listen, listenOnce} from "./events.js";
+import socket from "./socket";
 
 export class Score {
     static JOKER_VALUE = 1;
@@ -23,9 +24,30 @@ export class Score {
                 }
             });
         });
-        listen(EVENTS.SCORE_TOTAL_TOGGLE, () => {
-            this.toggleTotalScore();
+        listen(EVENTS.SCORE_TOTAL_TOGGLE, () => this.toggleTotalScore());
+
+        socket.on('grid:column-completed', ({columnLetter, player, first}) => {
+            const row = first ? 0 : 1;
+            const el = document.querySelectorAll(`.column-score[data-column="${columnLetter}"][data-row="${row}"]`)[0]
+            if (el) {
+                dispatch(EVENTS.SCORE_TOGGLE_COLUMN, {element: el, row, column: columnLetter});
+                dispatch(EVENTS.SCORE_RELOAD);
+            }
         });
+    }
+
+    static getColumnScoreState(element) {
+        if (!element) {
+            return "default";
+        }
+
+        if (!element.classList.contains('active') && !element.classList.contains('taken')) {
+            return 'active';
+        } else if (element.classList.contains('active') && !element.classList.contains('taken')) {
+            return 'taken';
+        }
+
+        return 'default';
     }
 
     get total() {
@@ -74,13 +96,41 @@ export class Score {
     }
 
     toggleTotalScore() {
-        let element = $('totalScore');
+        const element = $('totalScore');
         if (element.classList.contains('hide')) {
-            element.innerText = this.total;
             element.classList.remove('hide');
+            this.renderTotalScore();
         } else {
             element.innerText = '';
             element.classList.add('hide');
+        }
+    }
+
+    renderBonusScore(value) {
+        $('bonusTotal').innerText = value;
+        this.renderTotalScore();
+    }
+
+    renderColumnScore(value) {
+        $('columnsTotal').innerText = value;
+        this.renderTotalScore();
+    }
+
+    renderJokerScore(value) {
+        $('jokerTotal').innerText = value;
+        this.renderTotalScore();
+    }
+
+    renderStarScore(value) {
+        $('starsTotal').innerText = value;
+        this.renderTotalScore();
+    }
+
+    renderTotalScore() {
+        const el = $('totalScore');
+        if (!el.classList.contains('hide')) {
+            console.log('set total', this.total);
+            el.innerText = this.total;
         }
     }
 }

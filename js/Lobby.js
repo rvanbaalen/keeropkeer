@@ -2,7 +2,8 @@ import socket from "./socket";
 import {Notify} from "./Notify";
 import language from "../lang/default";
 import {GameStorage} from "./GameStorage";
-import {$, randomString} from "./utilities";
+import {$, forEachQuery, randomString} from "./utilities";
+import {Layout} from "./Layout";
 
 export class Lobby {
     #lobby = false;
@@ -17,7 +18,6 @@ export class Lobby {
 
         socket.on('lobby:updated', ({lobby}) => {
             this.lobby = lobby;
-            Lobby.setLobbyCodeDom({code: this.lobby.code});
         });
 
         socket.once('lobby:joined', ({lobby}) => {
@@ -26,6 +26,46 @@ export class Lobby {
 
         socket.once('lobby:created', ({lobby}) => {
             this.lobby = lobby;
+        });
+
+        socket.on('player:connected', ({player}) => {
+            Lobby.addPlayerToLobby(player);
+        });
+
+        socket.on('player:disconnected', ({player}) => {
+            Lobby.removePlayerFromLobby(player);
+        });
+    }
+
+    static loadAvatars() {
+        forEachQuery('#players .player:not(.avatar), #activePlayers .player:not(.avatar)', player => {
+            const playerName = player.innerText;
+            const url = new URL(`https://avatars.dicebear.com/api/bottts/${playerName}.svg?mood[]=happy`);
+            player.innerHTML = Layout.renderPlayerAvatar({url, playerName});
+            player.classList.add('avatar');
+        });
+    }
+
+    static addPlayerToLobby(player) {
+        forEachQuery('#players, #activePlayers', playerContainer => {
+            playerContainer.innerHTML += Layout.renderPlayer(player);
+        });
+        Lobby.loadAvatars();
+    }
+
+    static removePlayerFromLobby(playerObject) {
+        let player = (typeof playerObject === 'string') ? playerObject : playerObject.username;
+        forEachQuery(`li[data-player="${player}"]`, element => {
+            element.remove();
+        })
+    }
+
+    static setPlayers(players) {
+        forEachQuery('#players, #activePlayers', playerContainer => {
+            playerContainer.innerHTML = '';
+        });
+        players.forEach(player => {
+            Lobby.addPlayerToLobby(player);
         });
     }
 
@@ -90,6 +130,11 @@ export class Lobby {
         if (newLobby.code !== this.#lobby.code) {
             // Store the new value in the local storage as well.
             GameStorage.setItem('lobby', newLobby.code);
+        }
+
+        Lobby.setLobbyCodeDom({code: newLobby.code});
+        if (newLobby.players.length > 0) {
+            Lobby.setPlayers(newLobby.players);
         }
 
         this.#lobby = newLobby;
