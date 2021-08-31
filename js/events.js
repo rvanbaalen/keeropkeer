@@ -29,12 +29,10 @@ const app = $('app');
 const register = {};
 
 export function dispatch(eventName, eventData) {
-    console.info('Fired event: ' + eventName, eventData);
     let event = new CustomEvent(eventName, { detail: eventData });
     app.dispatchEvent(event);
 
     if (register[eventName]?.once) {
-        console.log('remove listener for ', eventName);
         app.removeEventListener(eventName, register[eventName].callback, false);
     }
 }
