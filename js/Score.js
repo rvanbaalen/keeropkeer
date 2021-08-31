@@ -5,26 +5,31 @@ import socket from "./socket";
 export class Score {
     static JOKER_VALUE = 1;
     static STAR_VALUE = -2;
+    Game;
 
-    constructor() {
-        listen(EVENTS.JOKER_SELECTED, event => {
-            dispatch(EVENTS.RENDER_SCORES, {scores: {jokers: this.jokerScore}});
-        });
-        listen(EVENTS.STAR_SELECTED, () => {
-            dispatch(EVENTS.RENDER_SCORES, {scores: {stars: this.starScore}});
-        });
-        listen(EVENTS.SCORE_RELOAD, () => {
-            dispatch(EVENTS.RENDER_SCORES, {
-                scores: {
-                    bonus: this.bonusScore,
-                    columns: this.columnScore,
-                    jokers: this.jokerScore,
-                    stars: this.starScore,
-                    total: this.total
-                }
+    constructor({Game}) {
+        this.Game = Game;
+
+        if (!Game.initialized) {
+            listen(EVENTS.JOKER_SELECTED, () => {
+                dispatch(EVENTS.RENDER_SCORES, {scores: {jokers: this.jokerScore}});
             });
-        });
-        listen(EVENTS.SCORE_TOTAL_TOGGLE, () => this.toggleTotalScore());
+            listen(EVENTS.STAR_SELECTED, () => {
+                dispatch(EVENTS.RENDER_SCORES, {scores: {stars: this.starScore}});
+            });
+            listen(EVENTS.SCORE_RELOAD, () => {
+                dispatch(EVENTS.RENDER_SCORES, {
+                    scores: {
+                        bonus: this.bonusScore,
+                        columns: this.columnScore,
+                        jokers: this.jokerScore,
+                        stars: this.starScore,
+                        total: this.total
+                    }
+                });
+            });
+            listen(EVENTS.SCORE_TOTAL_TOGGLE, () => this.toggleTotalScore());
+        }
 
         socket.on('grid:column-completed', ({columnLetter, player, first}) => {
             const row = first ? 0 : 1;

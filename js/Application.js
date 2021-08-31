@@ -7,10 +7,6 @@ export class Application {
     constructor() {
         this.currentView = document.querySelectorAll('.applicationWindow:not(.hidden)')[0];
 
-        if (!this.currentView) {
-            this.navigate(this.defaultView);
-        }
-
         listen(EVENTS.NAVIGATE, (event) => {
             const {page} = event.detail;
             if ($(page)) {
@@ -27,6 +23,7 @@ export class Application {
     }
 
     navigate(page) {
+        if (this.currentView?.id === page) return;
         this.hideCurrent();
         this.currentView = $(page);
         this.currentView.classList.remove('hidden');

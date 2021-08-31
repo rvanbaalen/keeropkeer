@@ -49,7 +49,7 @@ export class Engine {
         });
 
         socket.on('grid:column-completed', ({columnLetter, player}) => {
-
+            console.log(`Player ${player.username} completed column ${columnLetter}`);
         });
 
         socket.on('version', version => {
@@ -61,11 +61,49 @@ export class Engine {
         });
 
         socket.on('connect', () => {
-            document.body.classList.toggle('connected');
+            document.body.classList.add('connected');
         });
         socket.on('disconnect', () => {
-            document.body.classList.toggle('connected');
+            document.body.classList.remove('connected');
         });
+
+        $('newGameButton').addEventListener('click', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+
+            const modalId = 'newGameModal';
+            createNewModal({
+                id: modalId,
+                visible: true,
+                selfDestruct: true,
+                message: language.modal.newGame.body,
+                buttons: {
+                    cancel: {
+                        id: modalId + 'Cancel',
+                        label: language.label.cancel,
+                        callback(event) {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            dispatch(EVENTS.MODAL_HIDE, {modalId});
+                        }
+                    },
+                    ok: {
+                        id: modalId + 'Confirm',
+                        label: language.label.ok,
+                        callback(event) {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            // hide the modal first
+                            dispatch(EVENTS.MODAL_HIDE, {modalId});
+                            // Reset the game
+                            dispatch(EVENTS.GAME_NEW);
+                        }
+                    }
+                }
+            });
+
+            dispatch(EVENTS.MODAL_SHOW, {modalId: 'newGameModal'});
+        }, false);
     }
 
     parseOrientationOverlay() {
@@ -287,19 +325,9 @@ export class Engine {
         return button;
     }
 
-    render(state) {
-        this.parseGrid(state);
+    render() {
+        this.parseGrid();
         this.parseTotalScores();
-
-        const modalId = 'newGameModal';
-        if (!$(modalId)) {
-            createNewGameModal({modalId});
-        }
-
-        this.renderNewGameButton((event) => {
-            event.preventDefault()
-            dispatch(EVENTS.MODAL_SHOW, {modalId});
-        });
 
         dispatch(EVENTS.SCORE_RELOAD);
     }

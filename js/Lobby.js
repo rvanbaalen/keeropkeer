@@ -46,18 +46,26 @@ export class Lobby {
         });
     }
 
-    static addPlayerToLobby(player) {
-        forEachQuery('#players, #activePlayers', playerContainer => {
-            playerContainer.innerHTML += Layout.renderPlayer(player);
-        });
-        Lobby.loadAvatars();
+    static getPlayerElement(player) {
+        return document.querySelectorAll(`[data-player-id="${player.userId}"]`)[0];
     }
 
-    static removePlayerFromLobby(playerObject) {
-        let player = (typeof playerObject === 'string') ? playerObject : playerObject.username;
-        forEachQuery(`li[data-player="${player}"]`, element => {
-            element.remove();
-        })
+    static addPlayerToLobby(player) {
+        const playerElement = Lobby.getPlayerElement(player);
+        if (!playerElement) {
+            forEachQuery('#players, #activePlayers', playerContainer => {
+                playerContainer.innerHTML += Layout.renderPlayer(player);
+            });
+            Lobby.loadAvatars();
+        }
+    }
+
+    static removePlayerFromLobby(player) {
+        const playerElement = Lobby.getPlayerElement(player);
+        if (playerElement) {
+            // Player element exists in the DOM
+            playerElement.remove();
+        }
     }
 
     static setPlayers(players) {
@@ -147,53 +155,4 @@ export class Lobby {
     get playerNames() {
         return this.players.map(p => p.username).join(', ');
     }
-
-    static template(gameKey = '', playerId = -1) {
-        const newLobby = {...lobbyTemplate};
-        newLobby.code = gameKey;
-        newLobby.playerId = playerId;
-
-        return newLobby;
-    }
 }
-
-const lobbyTemplate = {
-    "members": [],
-    "playerId": -1,
-    "code": "KOK123",
-    "data": {
-        "columnScores": {
-            "A": -1,
-            "B": -1,
-            "C": -1,
-            "D": -1,
-            "E": -1,
-            "F": -1,
-            "G": -1,
-            "H": -1,
-            "I": -1,
-            "J": -1,
-            "K": -1,
-            "L": -1,
-            "M": -1,
-            "N": -1,
-            "O": -1
-        },
-        "colorScores": {
-            "high": {
-                "yellow": -1,
-                "green": -1,
-                "blue": -1,
-                "red": -1,
-                "orange": -1
-            },
-            "low": {
-                "yellow": -1,
-                "green": -1,
-                "blue": -1,
-                "red": -1,
-                "orange": -1
-            }
-        }
-    }
-};

@@ -1,6 +1,4 @@
 import {dispatch, EVENTS, listen} from "./events.js";
-import {createLevelSelectModal} from "./modals.js";
-import {$, forEachQuery} from "./utilities.js";
 import {GameStorage} from "./GameStorage.js";
 import socket from "./socket.js";
 
@@ -2063,20 +2061,17 @@ export class Level {
     };
 
     constructor() {
-        listen(EVENTS.LEVEL_SELECT_DOM, (event) => {
-            const {level, element} = event.detail;
-            Level.selectInDom(level, element);
-        });
-
         socket.on('level:selected', ({selectedLevel}) => {
-            this.level = selectedLevel;
-            dispatch(EVENTS.GAME_CREATE_STATE);
+            if (this.level !== selectedLevel) {
+                this.level = selectedLevel;
+                dispatch(EVENTS.GAME_CREATE_STATE);
+            }
         });
 
         this.registerEventHandlers();
     }
 
-    static selectInDom(level, element = false) {
+    static selectInDom(level) {
         const levels = document.querySelectorAll('#levels .level a');
         const levelElement = document.querySelectorAll('#levels .level a.' + level)[0];
 
@@ -2106,7 +2101,7 @@ export class Level {
                     socket.emit('game:start');
                     //dispatch(EVENTS.GAME_START);
                 } else {
-                    dispatch(EVENTS.LEVEL_SELECT_DOM, {level: selectedLevel});
+                    this.level = selectedLevel;
                     socket.emit('level:select', {selectedLevel});
                 }
             }, false);
@@ -2122,12 +2117,16 @@ export class Level {
         dispatch(EVENTS.NAVIGATE, {page: 'levelSelect'})
     }
 
+    getGrid() {
+        return Level.levelMap[this.selectedLevel];
+    }
+
     set level(level) {
         this.selectedLevel = level;
-        dispatch(EVENTS.LEVEL_SELECT_DOM, {level});
+        Level.selectInDom(level);
     }
 
     get level() {
-        return Level.levelMap[this.selectedLevel];
+        return this.selectedLevel;
     }
 }

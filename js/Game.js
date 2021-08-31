@@ -11,6 +11,8 @@ export class Game {
     static COLORS = ['green', 'yellow', 'blue', 'red', 'orange'];
     static TOTAL_JOKERS = 8;
 
+    initialized = false;
+
     Lobby;
     Level;
     Score;
@@ -18,9 +20,6 @@ export class Game {
 
     #cachedState = false;
     constructor() {
-        // Load state from localstorage
-        this.state = GameStorage.getItem('state');
-
         // Create player and connect to socket
         this.Player = new Player();
 
@@ -77,13 +76,15 @@ export class Game {
                 this.Lobby = LobbyInstance;
                 // Select new level
                 this.Level = new Level({Lobby: LobbyInstance, Game: this});
-                this.Score = new Score();
+                this.Score = new Score({Game: this});
 
                 // All ready now, start the game
                 this.start();
+                this.initialized = true;
             })
             .catch(err => {
                 console.error('Failed to create lobby', err);
+                this.initialized = false;
             });
     }
 
@@ -105,7 +106,6 @@ export class Game {
     }
 
     continue() {
-        this.state = GameStorage.getItem('state');
         // Load state from localstorage and trigger events to render level
         Application.navigateTo('gameView')
         dispatch(EVENTS.RENDER_LEVEL);
@@ -118,7 +118,7 @@ export class Game {
 
     createState() {
         let state = {
-            grid: this.Level.level,
+            grid: this.Level.getGrid(),
             jokers: [],
             colorScores: {
                 high: [],

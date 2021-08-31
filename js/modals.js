@@ -1,8 +1,7 @@
-import {$, forEachQuery, randomString} from "./utilities.js";
+import {$, randomString} from "./utilities.js";
 import language from "../lang/default.js";
 import { renderTemplate } from "./rendering.js";
-import {dispatch, EVENTS, listen, listenOnce} from "./events.js";
-import socket from "./socket";
+import {EVENTS, listen} from "./events.js";
 
 export function registerModalEvents() {
     listen(EVENTS.MODAL_TOGGLE, event => {
@@ -23,80 +22,6 @@ export function registerModalEvents() {
             $(modalId).classList.add('show');
         }
     });
-}
-
-export function createLevelSelectModal({modalId, Player, Lobby, Level}) {
-    // Create new modal and add it to the DOM
-    let {selectedLevel} = Level;
-
-    createNewModal({
-        id: modalId,
-        visible: false,
-        message: false,
-        body: `
-                <div class="new-game-container">
-                    <div class="lobby-container">
-                        <ul>
-                            <li id="playerNameWrap">Player: <span id="playerName">${Player.name}</span></li>
-                            <li id="lobbyWrap">Game code: <span id="lobbyCode">${Lobby.code}</span></li>
-                            <li id="playersJoinedWrap">Players joined (<span id="playerTotal">${Lobby.players.length}</span>): <span id="playerNames">${Lobby.playerNames}</span></li>
-                            <li id="startGameWrap"><button id="start">Start game</button></li>
-                        </ul>
-                    </div>
-                    <div class="level-image-container">
-                        <a href="#">
-                            <span>Level 1</span>
-                            <img src="/images/level1.png" alt="Level 1" class="level-image" id="level1">
-                        </a>
-                        <a href="#">
-                            <span>Level 2</span>
-                            <img src="/images/level2.png" alt="Level 2" class="level-image" id="level2">
-                        </a>
-                        <a href="#">
-                            <span>Level 3</span>
-                            <img src="/images/level3.png" alt="Level 3" class="level-image" id="level3">
-                        </a>
-                        <a href="#">
-                            <span>Level 4</span>
-                            <img src="/images/level4.png" alt="Level 4" class="level-image" id="level4">
-                        </a>
-                    </div>
-                </div>
-            `,
-        buttons: false
-    });
-
-    listenOnce(EVENTS.MODAL_SHOW, (event) => {
-        if (modalId === event.detail.modalId && selectedLevel) {
-            if (selectedLevel) {
-                // If there's a selected level, mark it in the dom
-                dispatch(EVENTS.LEVEL_SELECT_DOM, {level: selectedLevel});
-            } else {
-                // if not, make sure the local state reflects that.
-                dispatch(EVENTS.LEVEL_SELECT_DOM, {level: ''});
-            }
-        }
-    })
-
-    forEachQuery('.level-image-container a', level => {
-        level.addEventListener('click', (event) => {
-            event.preventDefault();
-            selectedLevel = event.target.id;
-            dispatch(EVENTS.LEVEL_SELECT_DOM, {level: selectedLevel, element: event.target});
-            socket.emit('level:select', {selectedLevel});
-
-        }, false);
-    });
-
-    $('start').addEventListener('click',(event) => {
-        event.preventDefault();
-        if ($('app').querySelectorAll('.level-image-container a.selected').length === 0) {
-            alert(language.notification.selectLevel);
-            return false;
-        }
-
-        dispatch(EVENTS.GAME_START);
-    }, false);
 }
 
 export function createNewModal(options) {
@@ -153,35 +78,17 @@ export function createNewModal(options) {
         modal.querySelector('#' + opts.buttons.ok.id).addEventListener('click', opts.buttons.ok.callback, false);
     }
 
+    if (opts.selfDestruct) {
+        listen(EVENTS.MODAL_HIDE, (event) => {
+            const {modalId} = event.detail;
+            if (modalId === opts.id) {
+                console.log(`Deleting ${opts.id} from the DOM`);
+                $(opts.id).delete();
+            }
+        });
+    }
+
     $('app').append(modal);
 
     return modal;
-}
-
-export function createNewGameModal({modalId = 'newGameModal'}) {
-    return createNewModal({
-        id: modalId,
-        message: language.modal.newGame.body,
-        buttons: {
-            cancel: {
-                id: modalId + 'Cancel',
-                label: language.label.cancel,
-                callback(event) {
-                    event.preventDefault();
-                    dispatch(EVENTS.MODAL_TOGGLE, {modalId});
-                }
-            },
-            ok: {
-                id: modalId + 'Confirm',
-                label: language.label.ok,
-                callback(event) {
-                    event.preventDefault();
-                    // hide the modal first
-                    dispatch(EVENTS.MODAL_TOGGLE, {modalId});
-                    // Reset the game
-                    dispatch(EVENTS.GAME_NEW);
-                }
-            }
-        }
-    });
 }

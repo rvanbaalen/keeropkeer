@@ -71,7 +71,6 @@ export class Player {
     }
 
     connectPlayer(player) {
-        console.log('Connecting player!', player);
         socket.auth = player;
         socket.connect();
     }

@@ -17,7 +17,6 @@ export const EVENTS = {
     RENDER_LEVEL: 'render-level',
     RENDER_SCORES: 'render-scores',
     LOADING: 'loading',
-    LEVEL_SELECT_DOM: 'level-select-dom',
     SCORE_TOGGLE_COLUMN: 'score-toggle-column',
     NAVIGATE_FROM: 'navigate-from',
     NAVIGATE_TO: 'navigate-to',
