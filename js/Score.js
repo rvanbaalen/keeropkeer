@@ -12,13 +12,13 @@ export class Score {
 
         if (!Game.initialized) {
             listen(EVENTS.JOKER_SELECTED, () => {
-                dispatch(EVENTS.RENDER_SCORES, {scores: {jokers: this.jokerScore}});
+                this.renderScores({scores: {jokers: this.jokerScore}});
             });
             listen(EVENTS.STAR_SELECTED, () => {
-                dispatch(EVENTS.RENDER_SCORES, {scores: {stars: this.starScore}});
+                this.renderScores({scores: {stars: this.starScore}});
             });
             listen(EVENTS.SCORE_RELOAD, () => {
-                dispatch(EVENTS.RENDER_SCORES, {
+                this.renderScores({
                     scores: {
                         bonus: this.bonusScore,
                         columns: this.columnScore,
@@ -28,6 +28,7 @@ export class Score {
                     }
                 });
             });
+
             listen(EVENTS.SCORE_TOTAL_TOGGLE, () => this.toggleTotalScore());
         }
 
@@ -39,6 +40,21 @@ export class Score {
                 dispatch(EVENTS.SCORE_RELOAD);
             }
         });
+    }
+
+    renderScores({scores}) {
+        if (typeof scores.bonus !== 'undefined') {
+            this.renderBonusScore(scores.bonus);
+        }
+        if (typeof scores.columns !== 'undefined') {
+            this.renderColumnScore(scores.columns);
+        }
+        if (typeof scores.jokers !== 'undefined') {
+            this.renderJokerScore(scores.jokers);
+        }
+        if (typeof scores.stars !== 'undefined') {
+            this.renderStarScore(scores.stars);
+        }
     }
 
     static getColumnScoreState(element) {

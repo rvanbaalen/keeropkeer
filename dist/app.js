@@ -117,7 +117,6 @@ const EVENTS = {
     STAR_SELECTED: 'star-selected',
     RENDER_TOTAL_SCORE: 'render-total-score',
     RENDER_LEVEL: 'render-level',
-    RENDER_SCORES: 'render-scores',
     LOADING: 'loading',
     SCORE_TOGGLE_COLUMN: 'score-toggle-column',
     NAVIGATE_FROM: 'navigate-from',
@@ -153,9 +152,13 @@ function registerModalEvents() {
         }
     });
     listen(EVENTS.MODAL_HIDE, event => {
-        const {modalId} = event.detail;
-        if ($(modalId) && $(modalId).classList.contains('show')) {
-            $(modalId).classList.remove('show');
+        const {modalId} = event.detail, element = $(modalId);
+        if (element && element.classList.contains('show')) {
+            element.classList.remove('show');
+        }
+
+        if (element.dataset.selfdestruct) {
+            element.remove();
         }
     });
     listen(EVENTS.MODAL_SHOW, event => {
@@ -190,7 +193,7 @@ function createNewModal(options) {
     }
 
     const modalTemplate = `
-        <div class="modal-overlay${opts.visible ? ' show' : ''}" id="${opts.id}">
+        <div class="modal-overlay${opts.visible ? ' show' : ''}" id="${opts.id}"${opts.selfDestruct ? ' data-selfDestruct="true"' : ''}>
             <div class="modal-container">
                 ${opts.title ? `
                 <div class="modal-title">
@@ -220,22 +223,12 @@ function createNewModal(options) {
         modal.querySelector('#' + opts.buttons.ok.id).addEventListener('click', opts.buttons.ok.callback, false);
     }
 
-    if (opts.selfDestruct) {
-        listen(EVENTS.MODAL_HIDE, (event) => {
-            const {modalId} = event.detail;
-            if (modalId === opts.id) {
-                console.log(`Deleting ${opts.id} from the DOM`);
-                $(opts.id).delete();
-            }
-        });
-    }
-
     $('app').append(modal);
 
     return modal;
 }
 
-const SOCKET_SERVER = 'https://dry-peak-80209.herokuapp.com/' ;
+const SOCKET_SERVER = 'http://192.168.1.111:3000/';
 
 const io = window.io;
 const socket = io(SOCKET_SERVER, { autoConnect: false });
@@ -245,96 +238,6 @@ socket.onAny((event, ...args) => {
 });
 
 console.log('Setup socket server ', SOCKET_SERVER);
-
-class Notify {
-    static TRANSITION_DELAY = 200;
-    constructor() {
-
-    }
-
-    static hide(opts) {
-        const {id, timeout = 400} = opts;
-        if (!$(id)) {
-            return;
-        }
-
-        $(id).classList.remove('show');
-        setTimeout(() => {
-            const element = $(id);
-            if (element) {
-                element.remove();
-            }
-        }, timeout);
-    }
-
-    static removePrevious() {
-        let activeNotifications = document.querySelectorAll('.notification.show').length;
-
-        if (activeNotifications > 0) {
-            // Get rid of active notifications first
-            let timeout = 200;
-            forEachQuery('.notification.show', notification => {
-                Notify.hide({id: notification.id, timeout});
-                timeout += 200;
-            });
-        }
-
-        return activeNotifications;
-    }
-
-    static show(opts) {
-        const delay = Notify.removePrevious();
-        const execute = (opts) => {
-            if (typeof opts === 'string') {
-                opts = {title: opts};
-            }
-
-            let {
-                message,
-                title = 'No message specified.',
-                timeout = 4000,
-                autoHide = false
-            } = opts;
-
-            const notification = Notify.createTemplate(message, title);
-
-            document.body.append(notification);
-            setTimeout(() => {
-                $(notification.id).classList.toggle('show');
-            }, 1);
-
-            if (autoHide) {
-                setTimeout(() => {
-                    Notify.hide({id: notification.id});
-                }, timeout);
-            }
-        };
-
-        if (delay > 0) {
-            setTimeout(() => {
-                execute(opts);
-            }, (delay * 200) + 200);
-        } else {
-            execute(opts);
-        }
-    }
-
-    static createTemplate(message, title = false) {
-        const notificationId = 'notification_' + randomString(5);
-        const template = `
-            <div class="notification" id="${notificationId}">
-                ${title ? `
-                <h2>${title}</h2>
-                ` : ``}
-                ${message ? `
-                <p>${message}</p>
-                ` : ``}
-            </div>
-        `;
-
-        return renderTemplate(template);
-    }
-}
 
 class GameStorage {
     static prefix = 'kok_';
@@ -2655,7 +2558,6 @@ class Level {
         socket.on('level:selected', ({selectedLevel}) => {
             if (this.level !== selectedLevel) {
                 this.level = selectedLevel;
-                dispatch(EVENTS.GAME_CREATE_STATE);
             }
         });
 
@@ -2663,11 +2565,10 @@ class Level {
     }
 
     static selectInDom(level) {
-        const levels = document.querySelectorAll('#levels .level a');
         const levelElement = document.querySelectorAll('#levels .level a.' + level)[0];
 
         // Clear state
-        Array.prototype.forEach.call(levels, (lvl) => {
+        forEachQuery('#levels .level a', lvl => {
             lvl.classList.remove('selected');
             document.getElementById('startGame')?.remove();
         });
@@ -2704,16 +2605,13 @@ class Level {
         this.selectedLevel = false;
     }
 
-    select({Player, Lobby}) {
-        dispatch(EVENTS.NAVIGATE, {page: 'levelSelect'});
-    }
-
     getGrid() {
         return Level.levelMap[this.selectedLevel];
     }
 
     set level(level) {
         this.selectedLevel = level;
+        dispatch(EVENTS.GAME_CREATE_STATE);
         Level.selectInDom(level);
     }
 
@@ -2732,13 +2630,13 @@ class Score {
 
         if (!Game.initialized) {
             listen(EVENTS.JOKER_SELECTED, () => {
-                dispatch(EVENTS.RENDER_SCORES, {scores: {jokers: this.jokerScore}});
+                this.renderScores({scores: {jokers: this.jokerScore}});
             });
             listen(EVENTS.STAR_SELECTED, () => {
-                dispatch(EVENTS.RENDER_SCORES, {scores: {stars: this.starScore}});
+                this.renderScores({scores: {stars: this.starScore}});
             });
             listen(EVENTS.SCORE_RELOAD, () => {
-                dispatch(EVENTS.RENDER_SCORES, {
+                this.renderScores({
                     scores: {
                         bonus: this.bonusScore,
                         columns: this.columnScore,
@@ -2748,6 +2646,7 @@ class Score {
                     }
                 });
             });
+
             listen(EVENTS.SCORE_TOTAL_TOGGLE, () => this.toggleTotalScore());
         }
 
@@ -2759,6 +2658,21 @@ class Score {
                 dispatch(EVENTS.SCORE_RELOAD);
             }
         });
+    }
+
+    renderScores({scores}) {
+        if (typeof scores.bonus !== 'undefined') {
+            this.renderBonusScore(scores.bonus);
+        }
+        if (typeof scores.columns !== 'undefined') {
+            this.renderColumnScore(scores.columns);
+        }
+        if (typeof scores.jokers !== 'undefined') {
+            this.renderJokerScore(scores.jokers);
+        }
+        if (typeof scores.stars !== 'undefined') {
+            this.renderStarScore(scores.stars);
+        }
     }
 
     static getColumnScoreState(element) {
@@ -2857,6 +2771,96 @@ class Score {
             console.log('set total', this.total);
             el.innerText = this.total;
         }
+    }
+}
+
+class Notify {
+    static TRANSITION_DELAY = 200;
+    constructor() {
+
+    }
+
+    static hide(opts) {
+        const {id, timeout = 400} = opts;
+        if (!$(id)) {
+            return;
+        }
+
+        $(id).classList.remove('show');
+        setTimeout(() => {
+            const element = $(id);
+            if (element) {
+                element.remove();
+            }
+        }, timeout);
+    }
+
+    static removePrevious() {
+        let activeNotifications = document.querySelectorAll('.notification.show').length;
+
+        if (activeNotifications > 0) {
+            // Get rid of active notifications first
+            let timeout = 200;
+            forEachQuery('.notification.show', notification => {
+                Notify.hide({id: notification.id, timeout});
+                timeout += 200;
+            });
+        }
+
+        return activeNotifications;
+    }
+
+    static show(opts) {
+        const delay = Notify.removePrevious();
+        const execute = (opts) => {
+            if (typeof opts === 'string') {
+                opts = {title: opts};
+            }
+
+            let {
+                message,
+                title = 'No message specified.',
+                timeout = 4000,
+                autoHide = false
+            } = opts;
+
+            const notification = Notify.createTemplate(message, title);
+
+            document.body.append(notification);
+            setTimeout(() => {
+                $(notification.id).classList.toggle('show');
+            }, 1);
+
+            if (autoHide) {
+                setTimeout(() => {
+                    Notify.hide({id: notification.id});
+                }, timeout);
+            }
+        };
+
+        if (delay > 0) {
+            setTimeout(() => {
+                execute(opts);
+            }, (delay * 200) + 200);
+        } else {
+            execute(opts);
+        }
+    }
+
+    static createTemplate(message, title = false) {
+        const notificationId = 'notification_' + randomString(5);
+        const template = `
+            <div class="notification" id="${notificationId}">
+                ${title ? `
+                <h2>${title}</h2>
+                ` : ``}
+                ${message ? `
+                <p>${message}</p>
+                ` : ``}
+            </div>
+        `;
+
+        return renderTemplate(template);
     }
 }
 
@@ -2974,7 +2978,7 @@ class Player {
     }
 }
 
-class Application {
+class Router {
     currentView;
     defaultView = 'levelSelect';
     constructor() {
@@ -3028,11 +3032,6 @@ class Game {
             dispatch(EVENTS.GAME_START);
         });
 
-        socket.on('lobby:updated', ({lobby}) => {
-            switch (lobby.state) {
-                            }
-        });
-
         socket.on('connect', () => {
             this.initialize();
         });
@@ -3084,7 +3083,10 @@ class Game {
     }
 
     start() {
-        if (!this.state) ; else {
+        if (!this.state) {
+            // No state, select a level first.
+            Router.navigateTo('levelSelect');
+        } else {
             this.continue();
         }
     }
@@ -3092,14 +3094,13 @@ class Game {
     new() {
         // Reset state, continue game
         this.resetState();
-        Application.navigateTo('levelSelect');
         // Continue rendering the newly created level
         this.start();
     }
 
     continue() {
         // Load state from localstorage and trigger events to render level
-        Application.navigateTo('gameView');
+        Router.navigateTo('gameView');
         dispatch(EVENTS.RENDER_LEVEL);
     }
 
@@ -3225,7 +3226,7 @@ class Engine {
     version;
     constructor() {
         $('app').innerHTML += Layout.render();
-        this.application = new Application();
+        this.application = new Router();
 
         registerModalEvents();
 
@@ -3240,21 +3241,6 @@ class Engine {
         });
         listen(EVENTS.RENDER_LEVEL, () => {
             this.render();
-        });
-        listen(EVENTS.RENDER_SCORES, (event) => {
-            const {scores} = event.detail, Score = this.currentGame.Score;
-            if (typeof scores.bonus !== 'undefined') {
-                Score.renderBonusScore(scores.bonus);
-            }
-            if (typeof scores.columns !== 'undefined') {
-                Score.renderColumnScore(scores.columns);
-            }
-            if (typeof scores.jokers !== 'undefined') {
-                Score.renderJokerScore(scores.jokers);
-            }
-            if (typeof scores.stars !== 'undefined') {
-                Score.renderStarScore(scores.stars);
-            }
         });
 
         socket.on('grid:column-completed', ({columnLetter, player}) => {
@@ -3482,7 +3468,8 @@ class Engine {
     }
 
     parseGrid() {
-        this.parseColumnGrid(this.currentGame.state);
+        const {state} = this.currentGame;
+        this.parseColumnGrid(state);
         this.parseJokerColumn(this.currentGame.state);
         this.parseScoreColumns(this.currentGame.state);
 

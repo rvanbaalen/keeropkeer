@@ -1,5 +1,4 @@
 import socket from "./socket";
-import {Notify} from "./Notify";
 import language from "../lang/default";
 import {GameStorage} from "./GameStorage";
 import {$, forEachQuery, randomString} from "./utilities";

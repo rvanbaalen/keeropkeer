@@ -15,7 +15,6 @@ export const EVENTS = {
     STAR_SELECTED: 'star-selected',
     RENDER_TOTAL_SCORE: 'render-total-score',
     RENDER_LEVEL: 'render-level',
-    RENDER_SCORES: 'render-scores',
     LOADING: 'loading',
     SCORE_TOGGLE_COLUMN: 'score-toggle-column',
     NAVIGATE_FROM: 'navigate-from',

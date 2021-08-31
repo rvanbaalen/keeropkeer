@@ -1,6 +1,7 @@
-import {dispatch, EVENTS, listen} from "./events.js";
+import {dispatch, EVENTS} from "./events.js";
 import {GameStorage} from "./GameStorage.js";
 import socket from "./socket.js";
+import {forEachQuery} from "./utilities";
 
 const level1 = [
     {
@@ -2064,7 +2065,6 @@ export class Level {
         socket.on('level:selected', ({selectedLevel}) => {
             if (this.level !== selectedLevel) {
                 this.level = selectedLevel;
-                dispatch(EVENTS.GAME_CREATE_STATE);
             }
         });
 
@@ -2072,14 +2072,13 @@ export class Level {
     }
 
     static selectInDom(level) {
-        const levels = document.querySelectorAll('#levels .level a');
         const levelElement = document.querySelectorAll('#levels .level a.' + level)[0];
 
         // Clear state
-        Array.prototype.forEach.call(levels, (lvl) => {
+        forEachQuery('#levels .level a', lvl => {
             lvl.classList.remove('selected');
             document.getElementById('startGame')?.remove();
-        });
+        })
 
         if (levelElement) {
             // Set new state if element exists.
@@ -2113,16 +2112,13 @@ export class Level {
         this.selectedLevel = false;
     }
 
-    select({Player, Lobby}) {
-        dispatch(EVENTS.NAVIGATE, {page: 'levelSelect'})
-    }
-
     getGrid() {
         return Level.levelMap[this.selectedLevel];
     }
 
     set level(level) {
         this.selectedLevel = level;
+        dispatch(EVENTS.GAME_CREATE_STATE);
         Level.selectInDom(level);
     }
 

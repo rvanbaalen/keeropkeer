@@ -1,7 +1,7 @@
 import {$} from "./utilities";
 import {dispatch, EVENTS, listen} from "./events";
 
-export class Application {
+export class Router {
     currentView;
     defaultView = 'levelSelect';
     constructor() {

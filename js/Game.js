@@ -5,7 +5,7 @@ import {Score} from "./Score.js";
 import socket from "./socket";
 import {GameStorage} from "./GameStorage.js";
 import {Player} from "./Player.js";
-import {Application} from "./Application";
+import {Router} from "./Router";
 
 export class Game {
     static COLORS = ['green', 'yellow', 'blue', 'red', 'orange'];
@@ -25,17 +25,6 @@ export class Game {
 
         socket.on('game:start', () => {
             dispatch(EVENTS.GAME_START);
-        });
-
-        socket.on('lobby:updated', ({lobby}) => {
-            switch (lobby.state) {
-                case 'levelSelect':
-                    //this.Level.select({Player: this.Player, Lobby: this.Lobby});
-                    break;
-                case 'inGame':
-                    // this.load();
-                    break;
-            }
         });
 
         socket.on('connect', () => {
@@ -91,7 +80,7 @@ export class Game {
     start() {
         if (!this.state) {
             // No state, select a level first.
-            //this.Level.select({Player: this.Player, Lobby: this.Lobby});
+            Router.navigateTo('levelSelect');
         } else {
             this.continue();
         }
@@ -100,14 +89,13 @@ export class Game {
     new() {
         // Reset state, continue game
         this.resetState();
-        Application.navigateTo('levelSelect');
         // Continue rendering the newly created level
         this.start();
     }
 
     continue() {
         // Load state from localstorage and trigger events to render level
-        Application.navigateTo('gameView')
+        Router.navigateTo('gameView')
         dispatch(EVENTS.RENDER_LEVEL);
     }
 

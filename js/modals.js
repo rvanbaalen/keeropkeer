@@ -11,9 +11,13 @@ export function registerModalEvents() {
         }
     });
     listen(EVENTS.MODAL_HIDE, event => {
-        const {modalId} = event.detail;
-        if ($(modalId) && $(modalId).classList.contains('show')) {
-            $(modalId).classList.remove('show');
+        const {modalId} = event.detail, element = $(modalId);
+        if (element && element.classList.contains('show')) {
+            element.classList.remove('show');
+        }
+
+        if (element.dataset.selfdestruct) {
+            element.remove();
         }
     });
     listen(EVENTS.MODAL_SHOW, event => {
@@ -48,7 +52,7 @@ export function createNewModal(options) {
     }
 
     const modalTemplate = `
-        <div class="modal-overlay${opts.visible ? ' show' : ''}" id="${opts.id}">
+        <div class="modal-overlay${opts.visible ? ' show' : ''}" id="${opts.id}"${opts.selfDestruct ? ' data-selfDestruct="true"' : ''}>
             <div class="modal-container">
                 ${opts.title ? `
                 <div class="modal-title">
@@ -76,16 +80,6 @@ export function createNewModal(options) {
     }
     if (opts.buttons.ok && typeof opts.buttons.ok.callback === 'function') {
         modal.querySelector('#' + opts.buttons.ok.id).addEventListener('click', opts.buttons.ok.callback, false);
-    }
-
-    if (opts.selfDestruct) {
-        listen(EVENTS.MODAL_HIDE, (event) => {
-            const {modalId} = event.detail;
-            if (modalId === opts.id) {
-                console.log(`Deleting ${opts.id} from the DOM`);
-                $(opts.id).delete();
-            }
-        });
     }
 
     $('app').append(modal);

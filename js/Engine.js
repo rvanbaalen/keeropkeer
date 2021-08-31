@@ -1,6 +1,6 @@
 import {$} from "./utilities.js";
 import {createElement, renderButton} from "./rendering.js";
-import {createNewGameModal, createNewModal, registerModalEvents} from "./modals.js";
+import {createNewModal, registerModalEvents} from "./modals.js";
 import {dispatch, EVENTS, listen} from "./events.js";
 import {Game} from "./Game.js";
 import language from "../lang/default.js";
@@ -8,7 +8,7 @@ import socket from "./socket";
 import {GameStorage} from "./GameStorage";
 import {Session} from "./Session";
 import {Layout} from "./Layout";
-import {Application} from "./Application";
+import {Router} from "./Router";
 
 export class Engine {
     currentGame = false;
@@ -16,7 +16,7 @@ export class Engine {
     version;
     constructor() {
         $('app').innerHTML += Layout.render();
-        this.application = new Application();
+        this.application = new Router();
 
         registerModalEvents();
 
@@ -31,21 +31,6 @@ export class Engine {
         });
         listen(EVENTS.RENDER_LEVEL, () => {
             this.render();
-        });
-        listen(EVENTS.RENDER_SCORES, (event) => {
-            const {scores} = event.detail, Score = this.currentGame.Score;
-            if (typeof scores.bonus !== 'undefined') {
-                Score.renderBonusScore(scores.bonus);
-            }
-            if (typeof scores.columns !== 'undefined') {
-                Score.renderColumnScore(scores.columns);
-            }
-            if (typeof scores.jokers !== 'undefined') {
-                Score.renderJokerScore(scores.jokers);
-            }
-            if (typeof scores.stars !== 'undefined') {
-                Score.renderStarScore(scores.stars);
-            }
         });
 
         socket.on('grid:column-completed', ({columnLetter, player}) => {
@@ -273,7 +258,8 @@ export class Engine {
     }
 
     parseGrid() {
-        this.parseColumnGrid(this.currentGame.state);
+        const {state} = this.currentGame;
+        this.parseColumnGrid(state);
         this.parseJokerColumn(this.currentGame.state);
         this.parseScoreColumns(this.currentGame.state);
 
