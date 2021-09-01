@@ -53,7 +53,7 @@ export class Notify {
 
             const notification = Notify.createTemplate(message, title);
 
-            document.body.append(notification);
+            $('app').append(notification);
             setTimeout(() => {
                 $(notification.id).classList.toggle('show');
             }, 1);

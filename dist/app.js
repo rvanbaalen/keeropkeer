@@ -69,7 +69,8 @@ var nl = {
         columns: 'A-O',
         stars: 'Sterren',
         totals: 'Totaal',
-        jokers: 'Jokers'
+        jokers: 'Jokers',
+        startGame: 'Start Spel'
     },
     messages: {
         connecting: 'Bezig met verbinden ...'
@@ -84,8 +85,7 @@ var nl = {
             title: 'Een speler is verbonden',
             message(username = 'onbekend') { return `${username} speelt mee!`; }
         }
-    },
-    lobbyStats(code, players) { return ` er ${players > 1 ? 'zijn' : 'is'} ${players} speler${players > 1 ? 's' : ''} in lobby '${code}'` }
+    }
 };
 
 let lang = 'nl';
@@ -121,8 +121,9 @@ const EVENTS = {
     SCORE_TOGGLE_COLUMN: 'score-toggle-column',
     NAVIGATE_FROM: 'navigate-from',
     NAVIGATE_TO: 'navigate-to',
-    NAVIGATE: 'navigate'
-
+    NAVIGATE: 'navigate',
+    NAVIGATE_BACK: 'navigate-back',
+    SCORE_COLUMN_CLAIM: 'score-column-claim'
 };
 
 const app = $('app');
@@ -168,6 +169,84 @@ function registerModalEvents() {
         }
     });
 }
+
+class Modals {
+    static newGame({modalId}) {
+        if (!modalId) {
+            modalId = `modal_${randomString(8)}`;
+        }
+
+        return createNewModal({
+            id: modalId,
+            visible: true,
+            selfDestruct: true,
+            message: language.modal.newGame.body,
+            buttons: {
+                cancel: {
+                    id: modalId + 'Cancel',
+                    label: language.label.cancel,
+                    callback(event) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        dispatch(EVENTS.MODAL_HIDE, {modalId});
+                    }
+                },
+                ok: {
+                    id: modalId + 'Confirm',
+                    label: language.label.ok,
+                    callback(event) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        // hide the modal first
+                        dispatch(EVENTS.MODAL_HIDE, {modalId});
+                        // Reset the game
+                        dispatch(EVENTS.GAME_NEW);
+                    }
+                }
+            }
+        });
+    }
+
+    static claimColumn({modalId, message, data}) {
+        if (!modalId) {
+            modalId = `modal_${randomString(8)}`;
+        }
+
+        return createNewModal({
+            id: modalId,
+            visible: true,
+            selfDestruct: true,
+            message: message,
+            buttons: {
+                cancel: {
+                    id: modalId + 'Cancel',
+                    label: 'Dont claim',
+                    callback(event) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        dispatch(EVENTS.SCORE_COLUMN_CLAIM, {player: data.player, column: data.columnLetter});
+                        dispatch(EVENTS.MODAL_HIDE, {modalId});
+                    }
+                },
+                ok: {
+                    id: modalId + 'Confirm',
+                    label: 'Claim',
+                    callback(event) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        // hide the modal first
+                        dispatch(EVENTS.MODAL_HIDE, {modalId});
+                        // Reset the game
+                        dispatch(EVENTS.SCORE_COLUMN_CLAIM, {player: data.player, column: data.columnLetter});
+                    }
+                }
+            }
+        });
+    }
+
+
+}
+
 
 function createNewModal(options) {
     const defaultOptions = {
@@ -277,6 +356,30 @@ class Layout {
 
     static renderViewGame() {
         return Layout.applicationWindow('gameView', `
+            <div class="gameViewRows">
+                <div class="columns">
+                    <div class="jokers" id="jokerContainer"></div>
+                    <div id="blockGrid"></div>
+                    <div class="scoreContainer">
+                        <div class="column" id="scoreColumn">
+                            <div id="scoreColumn1"></div>
+                        </div>
+                        <div class="column" id="scoreColumn2"></div>
+                    </div>
+                </div>
+                <div id="gameData">
+                    <div>
+                        <h2 class="rainbow">Spelers</h2>
+                        <ul id="activePlayers" class="blockList playerList"></ul>
+                    </div>
+                    <a id="newGameButton">Nieuw spel</a>
+                </div>
+            </div>
+       `);
+    }
+
+    static renderViewChangeLobby() {
+        return Layout.applicationWindow('changeLobby', `
             <div class="gameViewRows">
                 <div class="columns">
                     <div class="jokers" id="jokerContainer"></div>
@@ -411,9 +514,11 @@ class Lobby {
         forEachQuery('#players, #activePlayers', playerContainer => {
             playerContainer.innerHTML = '';
         });
-        players.forEach(player => {
-            Lobby.addPlayerToLobby(player);
-        });
+        if (players.length > 0) {
+            players.forEach(player => {
+                Lobby.addPlayerToLobby(player);
+            });
+        }
     }
 
     static async joinOrCreate(lobbyCode) {
@@ -2556,9 +2661,7 @@ class Level {
 
     constructor() {
         socket.on('level:selected', ({selectedLevel}) => {
-            if (this.level !== selectedLevel) {
-                this.level = selectedLevel;
-            }
+            this.level = selectedLevel;
         });
 
         this.registerEventHandlers();
@@ -2576,7 +2679,7 @@ class Level {
         if (levelElement) {
             // Set new state if element exists.
             levelElement.classList.toggle('selected');
-            levelElement.innerHTML += `<span id="startGame">Start Spel &rarr;</span>`;
+            levelElement.innerHTML += `<span id="startGame">${language.label.startGame} &rarr;</span>`;
         }
     }
 
@@ -2591,7 +2694,6 @@ class Level {
                 if (level.classList.contains('selected')) {
                     // Start the game!
                     socket.emit('game:start');
-                    //dispatch(EVENTS.GAME_START);
                 } else {
                     this.level = selectedLevel;
                     socket.emit('level:select', {selectedLevel});
@@ -2601,22 +2703,45 @@ class Level {
     }
 
     reset() {
-        GameStorage.removeItem('level');
-        this.selectedLevel = false;
+        this.level = false;
     }
 
     getGrid() {
-        return Level.levelMap[this.selectedLevel];
+        return Level.levelMap[this.level];
     }
 
     set level(level) {
-        this.selectedLevel = level;
-        dispatch(EVENTS.GAME_CREATE_STATE);
-        Level.selectInDom(level);
+        if (level === false) {
+            GameStorage.removeItem('level');
+            this.selectedLevel = level;
+            return;
+        }
+
+        if (level !== this.selectedLevel) {
+            // Level has changed
+            this.selectedLevel = level;
+            dispatch(EVENTS.GAME_CREATE_STATE);
+            Level.selectInDom(level);
+        }
+
+        GameStorage.setItem('level', this.selectedLevel);
     }
 
     get level() {
-        return this.selectedLevel;
+        let level = this.selectedLevel;
+        if (!level) {
+            level = GameStorage.getItem('level');
+        }
+
+        return level;
+    }
+
+    static isColumnComplete(letter) {
+        const column = document.querySelectorAll(`[data-letter="${letter}"]`)[0];
+        const blocks = column.querySelectorAll('.score-block').length;
+        const selectedBlocks = column.querySelectorAll('.score-block.selected').length;
+
+        return blocks === selectedBlocks;
     }
 }
 
@@ -2648,6 +2773,11 @@ class Score {
             });
 
             listen(EVENTS.SCORE_TOTAL_TOGGLE, () => this.toggleTotalScore());
+
+            listen(EVENTS.SCORE_COLUMN_CLAIM, (event) => {
+                const {players, column} = event.detail;
+                console.log('Claim column ' + column + ' for players', players);
+            });
         }
 
         socket.on('grid:column-completed', ({columnLetter, player, first}) => {
@@ -2826,7 +2956,7 @@ class Notify {
 
             const notification = Notify.createTemplate(message, title);
 
-            document.body.append(notification);
+            $('app').append(notification);
             setTimeout(() => {
                 $(notification.id).classList.toggle('show');
             }, 1);
@@ -2901,32 +3031,13 @@ class Player {
             this.player = player;
         });
 
-        socket.on('player:stats', ({totalPlayers, players}) => {
-            Player.setPlayerNamesDom({players});
-            Player.setPlayerTotalDom({totalPlayers});
-        });
-
         socket.on('player:connected', ({player}) => {
             Notify.show({
                 title: language.notification.playerJoined.title,
                 message: language.notification.playerJoined.message(player.username),
-                autoHide: true
+                //autoHide: true
             });
         });
-    }
-
-    static setPlayerTotalDom({totalPlayers}) {
-        const totalEl = $('playerTotal');
-        if (totalEl) {
-            totalEl.innerText = totalPlayers;
-        }
-    }
-
-    static setPlayerNamesDom({players}) {
-        const namesEl = $('playerNames');
-        if (namesEl) {
-            namesEl.innerText = players.join(', ');
-        }
     }
 
     static setPlayerNameDom({player}) {
@@ -2980,35 +3091,50 @@ class Player {
 
 class Router {
     currentView;
-    defaultView = 'levelSelect';
+    previousView = [];
+    silent = false;
     constructor() {
         this.currentView = document.querySelectorAll('.applicationWindow:not(.hidden)')[0];
+
+        listen(EVENTS.NAVIGATE_BACK, () => {
+            const page = this.previousView.pop(), silent = true;
+            if ($(page)) {
+                this.navigate({page, silent});
+            }
+        });
 
         listen(EVENTS.NAVIGATE, (event) => {
             const {page} = event.detail;
             if ($(page)) {
-                this.navigate(page);
+                this.navigate({page});
             }
         });
     }
 
     hideCurrent() {
         if (this.currentView) {
+            if (!this.silent) this.previousView = this.currentView;
             dispatch(EVENTS.NAVIGATE_FROM, {page: this.currentView});
             this.currentView.classList.add('hidden');
         }
     }
 
-    navigate(page) {
+    navigate({page, silent}) {
+        this.silent = silent || false;
         if (this.currentView?.id === page) return;
         this.hideCurrent();
         this.currentView = $(page);
         this.currentView.classList.remove('hidden');
         dispatch(EVENTS.NAVIGATE_TO, {page: this.currentView});
+        this.silent = false;
     }
 
     static navigateTo(page) {
         dispatch(EVENTS.NAVIGATE, {page});
+    }
+
+    static back() {
+        dispatch(EVENTS.NAVIGATE_BACK);
     }
 }
 
@@ -3222,11 +3348,11 @@ class Game {
 
 class Engine {
     currentGame = false;
-    application;
+    router;
     version;
     constructor() {
         $('app').innerHTML += Layout.render();
-        this.application = new Router();
+        this.router = new Router();
 
         registerModalEvents();
 
@@ -3244,7 +3370,13 @@ class Engine {
         });
 
         socket.on('grid:column-completed', ({columnLetter, player}) => {
-            console.log(`Player ${player.username} completed column ${columnLetter}`);
+            if (Level.isColumnComplete(columnLetter)) {
+                // My column is complete but so is theirs.
+                Modals.claimColumn({
+                    data: {player},
+                    message: `A player just finished column ${columnLetter}. Do you also want to claim the column score in this round?`
+                });
+            }
         });
 
         socket.on('version', version => {
@@ -3260,6 +3392,9 @@ class Engine {
         });
         socket.on('disconnect', () => {
             document.body.classList.remove('connected');
+
+            // Clear player list. They'll reappear once they reconnect
+            Lobby.setPlayers([]);
         });
 
         $('newGameButton').addEventListener('click', (event) => {
@@ -3267,35 +3402,7 @@ class Engine {
             event.stopPropagation();
 
             const modalId = 'newGameModal';
-            createNewModal({
-                id: modalId,
-                visible: true,
-                selfDestruct: true,
-                message: language.modal.newGame.body,
-                buttons: {
-                    cancel: {
-                        id: modalId + 'Cancel',
-                        label: language.label.cancel,
-                        callback(event) {
-                            event.preventDefault();
-                            event.stopPropagation();
-                            dispatch(EVENTS.MODAL_HIDE, {modalId});
-                        }
-                    },
-                    ok: {
-                        id: modalId + 'Confirm',
-                        label: language.label.ok,
-                        callback(event) {
-                            event.preventDefault();
-                            event.stopPropagation();
-                            // hide the modal first
-                            dispatch(EVENTS.MODAL_HIDE, {modalId});
-                            // Reset the game
-                            dispatch(EVENTS.GAME_NEW);
-                        }
-                    }
-                }
-            });
+            Modals.newGame({modalId});
 
             dispatch(EVENTS.MODAL_SHOW, {modalId: 'newGameModal'});
         }, false);
@@ -3533,7 +3640,7 @@ class Engine {
 
         let tpl = `
             <div class="column${column.column === 'H' ? ' highlight' : ''}">
-                <span class="rounded-block" data-letter="${column.column}">${column.column}</span>
+                <span class="rounded-block header" data-letter="${column.column}">${column.column}</span>
                 ${renderColumnBlocks(column.grid)}
                 <div class="column-score">${renderColumnScores(column.score)}</div>
             </div>

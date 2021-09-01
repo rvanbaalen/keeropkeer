@@ -26,6 +26,30 @@ export class Layout {
                     </div>
                 </div>
                 <div id="gameData">
+                    <div>
+                        <h2 class="rainbow">Spelers</h2>
+                        <ul id="activePlayers" class="blockList playerList"></ul>
+                    </div>
+                    <a id="newGameButton">Nieuw spel</a>
+                </div>
+            </div>
+       `);
+    }
+
+    static renderViewChangeLobby() {
+        return Layout.applicationWindow('changeLobby', `
+            <div class="gameViewRows">
+                <div class="columns">
+                    <div class="jokers" id="jokerContainer"></div>
+                    <div id="blockGrid"></div>
+                    <div class="scoreContainer">
+                        <div class="column" id="scoreColumn">
+                            <div id="scoreColumn1"></div>
+                        </div>
+                        <div class="column" id="scoreColumn2"></div>
+                    </div>
+                </div>
+                <div id="gameData">
                     <ul id="activePlayers" class="blockList playerList"></ul>
                     <a id="newGameButton">Nieuw spel</a>
                 </div>

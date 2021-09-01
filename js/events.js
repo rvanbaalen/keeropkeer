@@ -19,8 +19,9 @@ export const EVENTS = {
     SCORE_TOGGLE_COLUMN: 'score-toggle-column',
     NAVIGATE_FROM: 'navigate-from',
     NAVIGATE_TO: 'navigate-to',
-    NAVIGATE: 'navigate'
-
+    NAVIGATE: 'navigate',
+    NAVIGATE_BACK: 'navigate-back',
+    SCORE_COLUMN_CLAIM: 'score-column-claim'
 };
 
 const app = $('app');

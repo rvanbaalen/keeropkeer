@@ -30,6 +30,11 @@ export class Score {
             });
 
             listen(EVENTS.SCORE_TOTAL_TOGGLE, () => this.toggleTotalScore());
+
+            listen(EVENTS.SCORE_COLUMN_CLAIM, (event) => {
+                const {players, column} = event.detail;
+                console.log('Claim column ' + column + ' for players', players);
+            });
         }
 
         socket.on('grid:column-completed', ({columnLetter, player, first}) => {

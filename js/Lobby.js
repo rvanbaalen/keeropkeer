@@ -71,9 +71,11 @@ export class Lobby {
         forEachQuery('#players, #activePlayers', playerContainer => {
             playerContainer.innerHTML = '';
         });
-        players.forEach(player => {
-            Lobby.addPlayerToLobby(player);
-        });
+        if (players.length > 0) {
+            players.forEach(player => {
+                Lobby.addPlayerToLobby(player);
+            });
+        }
     }
 
     static async joinOrCreate(lobbyCode) {

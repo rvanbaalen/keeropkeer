@@ -12,7 +12,8 @@ export default {
         columns: 'A-O',
         stars: 'Sterren',
         totals: 'Totaal',
-        jokers: 'Jokers'
+        jokers: 'Jokers',
+        startGame: 'Start Spel'
     },
     messages: {
         connecting: 'Bezig met verbinden ...'
@@ -27,6 +28,5 @@ export default {
             title: 'Een speler is verbonden',
             message(username = 'onbekend') { return `${username} speelt mee!`; }
         }
-    },
-    lobbyStats(code, players) { return ` er ${players > 1 ? 'zijn' : 'is'} ${players} speler${players > 1 ? 's' : ''} in lobby '${code}'` }
+    }
 }

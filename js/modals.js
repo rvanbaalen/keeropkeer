@@ -1,7 +1,7 @@
 import {$, randomString} from "./utilities.js";
 import language from "../lang/default.js";
 import { renderTemplate } from "./rendering.js";
-import {EVENTS, listen} from "./events.js";
+import {dispatch, EVENTS, listen} from "./events.js";
 
 export function registerModalEvents() {
     listen(EVENTS.MODAL_TOGGLE, event => {
@@ -27,6 +27,84 @@ export function registerModalEvents() {
         }
     });
 }
+
+export class Modals {
+    static newGame({modalId}) {
+        if (!modalId) {
+            modalId = `modal_${randomString(8)}`;
+        }
+
+        return createNewModal({
+            id: modalId,
+            visible: true,
+            selfDestruct: true,
+            message: language.modal.newGame.body,
+            buttons: {
+                cancel: {
+                    id: modalId + 'Cancel',
+                    label: language.label.cancel,
+                    callback(event) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        dispatch(EVENTS.MODAL_HIDE, {modalId});
+                    }
+                },
+                ok: {
+                    id: modalId + 'Confirm',
+                    label: language.label.ok,
+                    callback(event) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        // hide the modal first
+                        dispatch(EVENTS.MODAL_HIDE, {modalId});
+                        // Reset the game
+                        dispatch(EVENTS.GAME_NEW);
+                    }
+                }
+            }
+        });
+    }
+
+    static claimColumn({modalId, message, data}) {
+        if (!modalId) {
+            modalId = `modal_${randomString(8)}`;
+        }
+
+        return createNewModal({
+            id: modalId,
+            visible: true,
+            selfDestruct: true,
+            message: message,
+            buttons: {
+                cancel: {
+                    id: modalId + 'Cancel',
+                    label: 'Dont claim',
+                    callback(event) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        dispatch(EVENTS.SCORE_COLUMN_CLAIM, {player: data.player, column: data.columnLetter})
+                        dispatch(EVENTS.MODAL_HIDE, {modalId});
+                    }
+                },
+                ok: {
+                    id: modalId + 'Confirm',
+                    label: 'Claim',
+                    callback(event) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        // hide the modal first
+                        dispatch(EVENTS.MODAL_HIDE, {modalId});
+                        // Reset the game
+                        dispatch(EVENTS.SCORE_COLUMN_CLAIM, {player: data.player, column: data.columnLetter})
+                    }
+                }
+            }
+        });
+    }
+
+
+}
+
 
 export function createNewModal(options) {
     const defaultOptions = {

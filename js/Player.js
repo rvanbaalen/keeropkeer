@@ -29,32 +29,13 @@ export class Player {
             this.player = player;
         });
 
-        socket.on('player:stats', ({totalPlayers, players}) => {
-            Player.setPlayerNamesDom({players});
-            Player.setPlayerTotalDom({totalPlayers});
-        });
-
         socket.on('player:connected', ({player}) => {
             Notify.show({
                 title: language.notification.playerJoined.title,
                 message: language.notification.playerJoined.message(player.username),
-                autoHide: true
+                //autoHide: true
             });
         });
-    }
-
-    static setPlayerTotalDom({totalPlayers}) {
-        const totalEl = $('playerTotal');
-        if (totalEl) {
-            totalEl.innerText = totalPlayers;
-        }
-    }
-
-    static setPlayerNamesDom({players}) {
-        const namesEl = $('playerNames');
-        if (namesEl) {
-            namesEl.innerText = players.join(', ');
-        }
     }
 
     static setPlayerNameDom({player}) {

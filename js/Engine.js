@@ -1,6 +1,6 @@
 import {$} from "./utilities.js";
 import {createElement, renderButton} from "./rendering.js";
-import {createNewModal, registerModalEvents} from "./modals.js";
+import {createNewModal, Modals, registerModalEvents} from "./modals.js";
 import {dispatch, EVENTS, listen} from "./events.js";
 import {Game} from "./Game.js";
 import language from "../lang/default.js";
@@ -9,14 +9,16 @@ import {GameStorage} from "./GameStorage";
 import {Session} from "./Session";
 import {Layout} from "./Layout";
 import {Router} from "./Router";
+import {Level} from "./Level";
+import {Lobby} from "./Lobby";
 
 export class Engine {
     currentGame = false;
-    application;
+    router;
     version;
     constructor() {
         $('app').innerHTML += Layout.render();
-        this.application = new Router();
+        this.router = new Router();
 
         registerModalEvents();
 
@@ -34,7 +36,13 @@ export class Engine {
         });
 
         socket.on('grid:column-completed', ({columnLetter, player}) => {
-            console.log(`Player ${player.username} completed column ${columnLetter}`);
+            if (Level.isColumnComplete(columnLetter)) {
+                // My column is complete but so is theirs.
+                Modals.claimColumn({
+                    data: {player},
+                    message: `A player just finished column ${columnLetter}. Do you also want to claim the column score in this round?`
+                });
+            }
         });
 
         socket.on('version', version => {
@@ -50,6 +58,9 @@ export class Engine {
         });
         socket.on('disconnect', () => {
             document.body.classList.remove('connected');
+
+            // Clear player list. They'll reappear once they reconnect
+            Lobby.setPlayers([]);
         });
 
         $('newGameButton').addEventListener('click', (event) => {
@@ -57,35 +68,7 @@ export class Engine {
             event.stopPropagation();
 
             const modalId = 'newGameModal';
-            createNewModal({
-                id: modalId,
-                visible: true,
-                selfDestruct: true,
-                message: language.modal.newGame.body,
-                buttons: {
-                    cancel: {
-                        id: modalId + 'Cancel',
-                        label: language.label.cancel,
-                        callback(event) {
-                            event.preventDefault();
-                            event.stopPropagation();
-                            dispatch(EVENTS.MODAL_HIDE, {modalId});
-                        }
-                    },
-                    ok: {
-                        id: modalId + 'Confirm',
-                        label: language.label.ok,
-                        callback(event) {
-                            event.preventDefault();
-                            event.stopPropagation();
-                            // hide the modal first
-                            dispatch(EVENTS.MODAL_HIDE, {modalId});
-                            // Reset the game
-                            dispatch(EVENTS.GAME_NEW);
-                        }
-                    }
-                }
-            });
+            Modals.newGame({modalId});
 
             dispatch(EVENTS.MODAL_SHOW, {modalId: 'newGameModal'});
         }, false);
@@ -323,7 +306,7 @@ export class Engine {
 
         let tpl = `
             <div class="column${column.column === 'H' ? ' highlight' : ''}">
-                <span class="rounded-block" data-letter="${column.column}">${column.column}</span>
+                <span class="rounded-block header" data-letter="${column.column}">${column.column}</span>
                 ${renderColumnBlocks(column.grid)}
                 <div class="column-score">${renderColumnScores(column.score)}</div>
             </div>

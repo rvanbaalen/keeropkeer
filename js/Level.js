@@ -2,6 +2,7 @@ import {dispatch, EVENTS} from "./events.js";
 import {GameStorage} from "./GameStorage.js";
 import socket from "./socket.js";
 import {forEachQuery} from "./utilities";
+import language from "../lang/default";
 
 const level1 = [
     {
@@ -2063,9 +2064,7 @@ export class Level {
 
     constructor() {
         socket.on('level:selected', ({selectedLevel}) => {
-            if (this.level !== selectedLevel) {
-                this.level = selectedLevel;
-            }
+            this.level = selectedLevel;
         });
 
         this.registerEventHandlers();
@@ -2083,7 +2082,7 @@ export class Level {
         if (levelElement) {
             // Set new state if element exists.
             levelElement.classList.toggle('selected');
-            levelElement.innerHTML += `<span id="startGame">Start Spel &rarr;</span>`;
+            levelElement.innerHTML += `<span id="startGame">${language.label.startGame} &rarr;</span>`;
         }
     }
 
@@ -2098,7 +2097,6 @@ export class Level {
                 if (level.classList.contains('selected')) {
                     // Start the game!
                     socket.emit('game:start');
-                    //dispatch(EVENTS.GAME_START);
                 } else {
                     this.level = selectedLevel;
                     socket.emit('level:select', {selectedLevel});
@@ -2108,21 +2106,44 @@ export class Level {
     }
 
     reset() {
-        GameStorage.removeItem('level');
-        this.selectedLevel = false;
+        this.level = false;
     }
 
     getGrid() {
-        return Level.levelMap[this.selectedLevel];
+        return Level.levelMap[this.level];
     }
 
     set level(level) {
-        this.selectedLevel = level;
-        dispatch(EVENTS.GAME_CREATE_STATE);
-        Level.selectInDom(level);
+        if (level === false) {
+            GameStorage.removeItem('level');
+            this.selectedLevel = level;
+            return;
+        }
+
+        if (level !== this.selectedLevel) {
+            // Level has changed
+            this.selectedLevel = level;
+            dispatch(EVENTS.GAME_CREATE_STATE);
+            Level.selectInDom(level);
+        }
+
+        GameStorage.setItem('level', this.selectedLevel);
     }
 
     get level() {
-        return this.selectedLevel;
+        let level = this.selectedLevel;
+        if (!level) {
+            level = GameStorage.getItem('level');
+        }
+
+        return level;
+    }
+
+    static isColumnComplete(letter) {
+        const column = document.querySelectorAll(`[data-letter="${letter}"]`)[0];
+        const blocks = column.querySelectorAll('.score-block').length;
+        const selectedBlocks = column.querySelectorAll('.score-block.selected').length;
+
+        return blocks === selectedBlocks;
     }
 }
