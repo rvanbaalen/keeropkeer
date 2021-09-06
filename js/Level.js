@@ -2138,12 +2138,4 @@ export class Level {
 
         return level;
     }
-
-    static isColumnComplete(letter) {
-        const column = document.querySelectorAll(`[data-letter="${letter}"]`)[0];
-        const blocks = column.querySelectorAll('.score-block').length;
-        const selectedBlocks = column.querySelectorAll('.score-block.selected').length;
-
-        return blocks === selectedBlocks;
-    }
 }

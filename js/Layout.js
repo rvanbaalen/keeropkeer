@@ -1,3 +1,9 @@
+import {$, R} from "./utilities";
+import socket from "./socket";
+import {Grid} from "./Grid";
+import {GridBlock} from "./GridBlock";
+import {ColumnScoreBlock} from "./ScoreBlock";
+
 export class Layout {
     static render() {
         return `
@@ -97,10 +103,55 @@ export class Layout {
         `);
     }
 
-    static renderPlayer(player) {
+    static renderPlayer({player}) {
         return `<li class="player" data-player="${player.username}" data-player-id="${player.userId}">${player.username}</li>`;
     }
     static renderPlayerAvatar({url, playerName}) {
         return `<img src="${url}" alt="${playerName}"/><span>${playerName}</span>`;
+    }
+    static renderJoker({joker}) {
+        return `<span class="joker${joker.selected ? ' used' : ''}">!</span>`;
+    }
+    static renderJokers({jokers}) {
+        $('jokerContainer').innerHTML = jokers
+            .map(joker => Layout.renderJoker({joker}))
+            .join('');
+    }
+    static renderGrid({columns}) {
+        const blockGrid = $('blockGrid');
+        blockGrid.innerHTML = '';
+        columns.forEach(column => {
+            blockGrid.append(Layout.renderGridColumn({column}));
+        });
+    }
+    static renderGridColumn({column}) {
+        const letter = column.column;
+        return R(`
+            <div class="column${column.column === 'H' ? ' highlight' : ''}">
+                <span class="rounded-block header" data-letter="${letter}">${letter}</span>
+                ${ Layout.renderGridColumnBlocks({blocks: column.grid, column}) }
+                ${ Layout.renderColumnScores({column}) }
+            </div>
+        `);
+    }
+    static renderGridColumnBlocks({blocks, column}) {
+        return blocks.map((block, index) => {
+            return new GridBlock({
+                letter: column.column,
+                row: index,
+                color: block.color,
+                star: block.star,
+                selected: block.selected
+            }).render();
+        }).join('')
+    }
+    static renderColumnScores({column}) {
+        return `<div class="column-score">${
+            column.score.map((scoreObject, row) => {
+                const {value, state} = scoreObject, 
+                    letter = column.column;
+                return new ColumnScoreBlock({ letter, row, value, state }).render();
+            }).join('') 
+        }</div>`;
     }
 }

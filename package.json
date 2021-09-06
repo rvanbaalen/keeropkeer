@@ -4,6 +4,7 @@
   "description": "Scoreblok",
   "main": "index.html",
   "dependencies": {
+    "delegate-it": "^3.0.0",
     "rollup": "^2.56.2",
     "socket.io-client": "^4.1.3"
   },

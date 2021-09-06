@@ -1,4 +1,4 @@
-import {$} from "./utilities.js";
+import {$, forEachQuery} from "./utilities.js";
 import {createElement, renderButton} from "./rendering.js";
 import {createNewModal, Modals, registerModalEvents} from "./modals.js";
 import {dispatch, EVENTS, listen} from "./events.js";
@@ -9,8 +9,8 @@ import {GameStorage} from "./GameStorage";
 import {Session} from "./Session";
 import {Layout} from "./Layout";
 import {Router} from "./Router";
-import {Level} from "./Level";
 import {Lobby} from "./Lobby";
+import {Grid} from "./Grid";
 
 export class Engine {
     currentGame = false;
@@ -36,7 +36,7 @@ export class Engine {
         });
 
         socket.on('grid:column-completed', ({columnLetter, player}) => {
-            if (Level.isColumnComplete(columnLetter)) {
+            if (Grid.isColumnComplete({letter: columnLetter})) {
                 // My column is complete but so is theirs.
                 Modals.claimColumn({
                     data: {player},
@@ -90,84 +90,42 @@ export class Engine {
     }
 
     parseColumnGrid(state) {
-        const blockGrid = $('blockGrid');
-        blockGrid.innerHTML = '';
-        state.grid.forEach(column => {
-            blockGrid.innerHTML += this.parseColumn(column);
-        });
+        Layout.renderGrid({columns: state.grid});
 
         // Colored blocks
-        let scoreBlocks = document.querySelectorAll('.score-block:not(.final-score)');
-        Array.prototype.forEach.call(scoreBlocks, (block) => {
+        forEachQuery('.score-block:not(.final-score)', block => {
             block.addEventListener('click', (event) => {
-                event.preventDefault();
-                event.stopPropagation();
-
-                let selected = !block.classList.contains('selected');
-                this.currentGame.updateBlockState(block.dataset.column, block.dataset.row, 'selected', selected);
-                dispatch(EVENTS.GRID_BLOCK_SELECTED, {selected, block});
-                if (block.querySelectorAll('.star').length > 0) {
-                    // Has a star, update star score.
-                    dispatch(EVENTS.STAR_SELECTED, {selected, block});
-                }
+                Grid.coloredBlockHandler({block, event, currentGame: this.currentGame});
             }, false);
         });
     }
 
     parseJokerColumn(state) {
-        let jokerContainer = $('jokerContainer');
-        jokerContainer.innerHTML = state.jokers.map(joker => {
-            return `<span class="joker${joker.selected ? ' used' : ''}">!</span>`
-        }).join('');
+        Layout.renderJokers({jokers: state.jokers});
 
         // Joker events
-        let jokers = document.getElementsByClassName('joker');
-        Array.prototype.forEach.call(jokers, (joker, index) => {
+        forEachQuery('.joker', (joker, index) => {
             joker.addEventListener('click', (event) => {
-                event.preventDefault();
-                event.stopPropagation();
-
-                let selected = !joker.classList.contains('used');
-                this.currentGame.updateJokerState(index, selected);
-                dispatch(EVENTS.JOKER_SELECTED, {joker, selected});
+                Grid.jokerHandler({joker, currentGame: this.currentGame, index, event});
             }, false);
         });
     }
 
     parseScoreColumns(state) {
+        const valueClass = (value) => {
+            if (value === -1) return ' selected';
+            if (value === 5 || value === 3) return ' final-selected';
+            return '';
+        }
+
+        console.log(state.colorScores.high);
         $('scoreColumn1').innerHTML = state.colorScores.high.map(colorScore => {
-            const valueClass = (value) => {
-                if (value === -1) return ' selected';
-                if (value === 5) return ' final-selected';
-                return '';
-            }
-
-            return `<span class="score-block final-score ${colorScore.color}${valueClass(colorScore.value)}"><span>5</span></span>`;
+            return `<span class="score-block final-score ${colorScore.color}${valueClass(colorScore.value)}" data-color="${colorScore.color}" data-type="colorScore" data-va><span>${colorScore.value}</span></span>`;
         }).join('');
-        // state.colorScores.high.forEach(colorScore => {
-        //     let element = createElement('span', {className: 'score-block final-score ' + colorScore.color});
-        //     if (colorScore.value === -1) {
-        //         element.classList.add('selected');
-        //     }
-        //     if (colorScore.value === 5) {
-        //         element.classList.add('final-selected');
-        //     }
-        //     createElement('span', {innerText: 5}, element);
-        //     $('scoreColumn1').append(element);
-        // });
 
-        $('scoreColumn2').innerHTML = '';
-        state.colorScores.low.forEach(colorScore => {
-            let element = createElement('span', {className: 'score-block final-score ' + colorScore.color});
-            if (colorScore.value === -1) {
-                element.classList.add('selected');
-            }
-            if (colorScore.value === 3) {
-                element.classList.add('final-selected');
-            }
-            createElement('span', {innerText: 3}, element);
-            $('scoreColumn2').append(element);
-        });
+        $('scoreColumn2').innerHTML = state.colorScores.low.map(colorScore => {
+            return `<span class="score-block final-score ${colorScore.color}${valueClass(colorScore.value)}"><span>3</span></span>`;
+        }).join('');
 
 
         // Final score toggles
@@ -226,18 +184,18 @@ export class Engine {
 
         // Column scores
         let columnScores = document.querySelectorAll('span.column-score');
-        Array.prototype.forEach.call(columnScores, (columnScore) => {
-            columnScore.addEventListener('click', (event) => {
-                event.preventDefault();
-                event.stopPropagation();
-
-                dispatch(EVENTS.SCORE_TOGGLE_COLUMN, {
-                    column: columnScore.dataset.column,
-                    element: columnScore
-                })
-                dispatch(EVENTS.SCORE_RELOAD);
-            }, false);
-        });
+        // Array.prototype.forEach.call(columnScores, (columnScore) => {
+        //     columnScore.addEventListener('click', (event) => {
+        //         event.preventDefault();
+        //         event.stopPropagation();
+        //
+        //         dispatch(EVENTS.SCORE_TOGGLE_COLUMN, {
+        //             column: columnScore.dataset.column,
+        //             element: columnScore
+        //         })
+        //         dispatch(EVENTS.SCORE_RELOAD);
+        //     }, false);
+        // });
     }
 
     parseGrid() {
@@ -302,41 +260,6 @@ export class Engine {
     }
 
     parseColumn(column) {
-        let blocks = column.grid.length, selectedBlocks = 0;
 
-        let tpl = `
-            <div class="column${column.column === 'H' ? ' highlight' : ''}">
-                <span class="rounded-block header" data-letter="${column.column}">${column.column}</span>
-                ${renderColumnBlocks(column.grid)}
-                <div class="column-score">${renderColumnScores(column.score)}</div>
-            </div>
-        `;
-
-        // create grid blocks
-        function renderColumnBlocks(blocks) {
-            return blocks.map((block, index) => {
-                if (block.selected) selectedBlocks++;
-
-                return `
-                    <span class="score-block${block.selected ? ' selected' : ''} ${block.color}" data-column="${column.column}" data-row="${index}">
-                        ${block.star ? `<span class="star">*</span>` : ``}
-                    </span>
-                `;
-            }).join('');
-        }
-        // create score columns
-        //let score = createElement('div', {className: 'column-score'});
-        function renderColumnScores(scores) {
-            return scores.map((scoreObject, index) => {
-                let state = (scoreObject.state && scoreObject.state !== 'default') ? ' ' + scoreObject.state : '';
-                return `<span class="rounded-block column-score${state}" data-column="${column.column}" data-row="${index}">${scoreObject.value}</span>`;
-            }).join('');
-        }
-
-        if (blocks === selectedBlocks) {
-            socket.emit('grid:column-complete', {columnLetter: column.column});
-        }
-
-        return tpl;
     }
 }

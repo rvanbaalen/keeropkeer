@@ -1,15 +1,41 @@
+/**
+ * Shorthand function for document.getElementById()
+ * @param id
+ * @returns {HTMLElement}
+ */
 function $(id) {
     return document.getElementById(id);
 }
 
+/**
+ * Create a random string with given length
+ * @param length The length of the string
+ * @returns {string}
+ */
 function randomString(length = 6) {
     return Math.random().toString(36).replace(/[^a-z]+/g, '').substr(0, length);
 }
 
+/**
+ * Shorthand function for document.querySelectorAll.forEach
+ * @param query
+ * @param callback
+ */
 function forEachQuery(query, callback) {
     Array.prototype.forEach.call(
         document.querySelectorAll(query), callback
     );
+}
+
+/**
+ * Render template strings into actual node elements
+ * @param tpl Template string
+ * @returns {Element}
+ */
+function R(tpl) {
+    const tmp = document.createElement('div');
+    tmp.innerHTML = tpl;
+    return tmp.firstElementChild;
 }
 
 function createElement(el, options = {}, appendTo = undefined){
@@ -111,7 +137,6 @@ const EVENTS = {
     MODAL_TOGGLE: 'modal-toggle',
     MODAL_HIDE: 'modal-hide',
     MODAL_SHOW: 'modal-show',
-    GRID_BLOCK_SELECTED: 'grid-block-selected',
     GRID_RENDER_COMPLETE: 'grid-render-complete',
     JOKER_SELECTED: 'joker-selected',
     STAR_SELECTED: 'star-selected',
@@ -123,7 +148,9 @@ const EVENTS = {
     NAVIGATE_TO: 'navigate-to',
     NAVIGATE: 'navigate',
     NAVIGATE_BACK: 'navigate-back',
-    SCORE_COLUMN_CLAIM: 'score-column-claim'
+    SCORE_COLUMN_CLAIM: 'score-column-claim',
+    GRID_COLUMN_COMPLETE: 'grid-column-complete',
+    BLOCK_SELECTED: 'block-selected'
 };
 
 const app = $('app');
@@ -307,7 +334,7 @@ function createNewModal(options) {
     return modal;
 }
 
-const SOCKET_SERVER = 'https://dry-peak-80209.herokuapp.com/' ;
+const SOCKET_SERVER = 'http://192.168.1.111:3000/';
 
 const io = window.io;
 const socket = io(SOCKET_SERVER, { autoConnect: false });
@@ -337,6 +364,462 @@ class GameStorage {
         }
 
         return JSON.parse(value);
+    }
+}
+
+class Block {
+    template = false;
+    state = {};
+
+    constructor({letter, row, color, selected = false, element}) {
+        this.template = element;
+        this.letter = letter;
+        this.row = row;
+        this.color = color;
+        this.selected = selected;
+    }
+
+    /**
+     * @returns {string}
+     */
+    get letter() {
+        return this.state?.letter;
+    }
+
+    /**
+     * @returns {int}
+     */
+    get row() {
+        return this.state?.row;
+    }
+
+    /**
+     * @returns {string}
+     */
+    get color() {
+        return this.state?.color;
+    }
+
+    /**
+     * @returns {boolean}
+     */
+    get selected() {
+        return !!this.state?.selected;
+    }
+
+    /**
+     * @param {string} value
+     */
+    set letter(value) {
+        this.state.letter = value;
+    }
+
+    /**
+     * @param {int} value
+     */
+    set row(value) {
+        this.state.row = value;
+    }
+
+    /**
+     * @param {string} value
+     */
+    set color(value) {
+        this.state.color = value;
+    }
+
+    /**
+     * @param {boolean} value
+     */
+    set selected(value) {
+        const currentState = this.state.selected;
+        if (value !== currentState) {
+            this.state.selected = !!value;
+            this.onSelected();
+        }
+    }
+
+    onSelected() {
+        if (this.element && this.selected) {
+            // Add class
+            this.element.classList.add('selected');
+            // Send generic block selected event
+            dispatch(EVENTS.BLOCK_SELECTED, {block: this});
+        }
+        if (this.element && !this.selected) {
+            this.element.classList.remove('selected');
+        }
+    }
+
+    /**
+     * @param {string} tpl
+     */
+    set element(tpl) {
+        if (typeof tpl === 'string') tpl = R(tpl);
+        this.template = tpl;
+    }
+
+    /**
+     * @returns {Element}
+     */
+    get element() {
+        return this.template;
+    }
+
+    /**
+     * @returns {string}
+     */
+    render() {
+        // Create the block, add event listeners
+        const tpl = `
+            <span 
+                class="score-block${this.selected ? ' selected' : ''}" 
+                data-letter="${this.letter}" 
+                data-row="${this.row}" 
+                data-color="${this.color}">
+            </span>
+        `;
+
+        this.element = tpl;
+        return tpl;
+    }
+
+    /**
+     * @param element
+     * @returns {Block}
+     */
+    static getInstance(element) {
+        if (typeof element === 'string') element = document.querySelector(element);
+        if (element.length > 1) element = element[0];
+
+        const selected = element.classList.contains('selected');
+        const {letter, row, color} = element.dataset;
+        return new Block({letter, row, color, selected});
+    }
+
+    static getByProperties({letter, row}) {
+        return document.querySelector(`[data-letter="${letter}"][data-row="${row}"]`);
+    }
+}
+
+class GridBlock extends Block {
+    constructor({letter, row, color, star = false, selected = false, element}) {
+        super({letter, row, color, selected, element});
+        this.state.star = star;
+    }
+
+    render() {
+        // Create the block, add event listeners
+        const tpl = `
+            <span 
+                class="score-block${this.selected ? ' selected' : ''}" 
+                data-letter="${this.letter}" 
+                data-row="${this.row}" 
+                data-color="${this.color}">
+                ${this.star ? `<span class="star">*</span>` : ''}    
+            </span>
+        `;
+
+        this.element = tpl;
+        return tpl;
+    }
+
+    get star() {
+        return this.state?.star;
+    }
+
+    set star(value) {
+        this.state.star = !!value;
+    }
+
+    onSelected() {
+        super.onSelected();
+        if (this.star) {
+            dispatch(EVENTS.STAR_SELECTED, {selected: this.selected, block: this});
+        }
+    }
+
+    /**
+     * @param element
+     * @returns {GridBlock}
+     */
+    static getInstance(element) {
+        if (typeof element === 'string') element = document.querySelector(element);
+        if (element.length > 1) element = element[0];
+
+        const star = !!element.querySelector('span.star');
+        const selected = element.classList.contains('selected');
+        const {letter, row, color} = element.dataset;
+        return new GridBlock({letter, row, color, star, selected, element});
+    }
+}
+
+class Grid {
+    static coloredBlockHandler({event, block, currentGame}) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        let gridBlock = GridBlock.getInstance(block);
+        gridBlock.selected = !gridBlock.selected;
+
+        // let selected = !block.classList.contains('selected');
+        currentGame.updateBlockState({gridBlock});
+
+        // if (block.querySelectorAll('.star').length > 0) {
+        //     // Has a star, update star score.
+        //     dispatch(EVENTS.STAR_SELECTED, {selected, block});
+        // }
+        //
+        // const letter = block.dataset.column;
+        // if (Grid.isColumnComplete({letter})) {
+        //     console.log('grid complete', letter);
+        //     const scoreElement = (high) => document.querySelector(`.column-score[data-column="${letter}"][data-row="${high ? 0 : 1}"]`);
+        //     const highScore = !scoreElement(true).classList.contains('taken');
+        //     if (highScore) {
+        //         scoreElement(true).classList.add('active');
+        //     } else {
+        //         scoreElement(false).classList.add('active');
+        //     }
+        //     socket.emit('grid:column-complete', {columnLetter: letter, highScore});
+        //     dispatch(EVENTS.GRID_COLUMN_COMPLETE, {letter});
+        // }
+    }
+
+    static jokerHandler({joker, currentGame, index, event}) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        let selected = !joker.classList.contains('used');
+        currentGame.updateJokerState(index, selected);
+        dispatch(EVENTS.JOKER_SELECTED, {joker, selected});
+    }
+
+    static isColumnComplete({letter, parent = document}) {
+        const columnElement = parent.querySelectorAll(`[data-letter="${letter}"]`)[0]?.parentElement;
+        const selectedBlocks = columnElement.querySelectorAll('.score-block.selected').length;
+
+        return selectedBlocks === 7;
+    }
+}
+
+/** Keeps track of raw listeners added to the base elements to avoid duplication */
+const ledger = new WeakMap();
+function editLedger(wanted, baseElement, callback, setup) {
+    var _a, _b;
+    if (!wanted && !ledger.has(baseElement)) {
+        return false;
+    }
+    const elementMap = (_a = ledger.get(baseElement)) !== null && _a !== void 0 ? _a : new WeakMap();
+    ledger.set(baseElement, elementMap);
+    if (!wanted && !ledger.has(baseElement)) {
+        return false;
+    }
+    const setups = (_b = elementMap.get(callback)) !== null && _b !== void 0 ? _b : new Set();
+    elementMap.set(callback, setups);
+    const existed = setups.has(setup);
+    if (wanted) {
+        setups.add(setup);
+    }
+    else {
+        setups.delete(setup);
+    }
+    return existed && wanted;
+}
+function isEventTarget(elements) {
+    return typeof elements.addEventListener === 'function';
+}
+function safeClosest(event, selector) {
+    let target = event.target;
+    if (target instanceof Text) {
+        target = target.parentElement;
+    }
+    if (target instanceof Element && event.currentTarget instanceof Element) {
+        // `.closest()` may match ancestors of `currentTarget` but we only need its children
+        const closest = target.closest(selector);
+        if (closest && event.currentTarget.contains(closest)) {
+            return closest;
+        }
+    }
+}
+// This type isn't exported as a declaration, so it needs to be duplicated above
+function delegate(base, selector, type, callback, options) {
+    // Handle Selector-based usage
+    if (typeof base === 'string') {
+        base = document.querySelectorAll(base);
+    }
+    // Handle Array-like based usage
+    if (!isEventTarget(base)) {
+        const subscriptions = Array.prototype.map.call(base, (element) => {
+            return delegate(element, selector, type, callback, options);
+        });
+        return {
+            destroy() {
+                for (const subscription of subscriptions) {
+                    subscription.destroy();
+                }
+            }
+        };
+    }
+    // `document` should never be the base, it's just an easy way to define "global event listeners"
+    const baseElement = base instanceof Document ? base.documentElement : base;
+    // Handle the regular Element usage
+    const capture = Boolean(typeof options === 'object' ? options.capture : options);
+    const listenerFn = (event) => {
+        const delegateTarget = safeClosest(event, selector);
+        if (delegateTarget) {
+            event.delegateTarget = delegateTarget;
+            callback.call(baseElement, event);
+        }
+    };
+    const setup = JSON.stringify({ selector, type, capture });
+    const isAlreadyListening = editLedger(true, baseElement, callback, setup);
+    const delegateSubscription = {
+        destroy() {
+            baseElement.removeEventListener(type, listenerFn, options);
+            editLedger(false, baseElement, callback, setup);
+        }
+    };
+    if (!isAlreadyListening) {
+        baseElement.addEventListener(type, listenerFn, options);
+    }
+    return delegateSubscription;
+}
+
+class ScoreBlock extends Block {
+    static TYPE_COLUMN_SCORE = 'column-score';
+    static TYPE_COLOR_SCORE = 'color-score';
+
+    #DEFAULT_VALUE = 0;
+
+    constructor({
+        letter,
+        row,
+        color,
+        selected = false,
+        element,
+        value = 0,
+        type,
+        claimedBy = []
+    }) {
+        super({letter, row, color, selected, element});
+
+        this.type = type;
+        this.value = value;
+        this.claimedBy = claimedBy;
+    }
+
+    /**
+     * @param {Array|Object} value
+     */
+    set claimedBy(value) {
+        if (!Array.isArray(value)) value = [value];
+        this.state.claimedBy = value;
+    }
+
+    /**
+     * @returns {Array}
+     */
+    get claimedBy() {
+        return this.state?.claimedBy;
+    }
+
+    /**
+     * @param {number} value
+     */
+    set value(value) {
+        if (isNaN(value)) value = this.#DEFAULT_VALUE;
+        this.state.value = value;
+    }
+
+    /**
+     * @returns {number}
+     */
+    get value() {
+        return this.state?.value || this.#DEFAULT_VALUE;
+    }
+
+    /**
+     * @param {string} value
+     */
+    set type(value) {
+        this.state.type = value;
+    }
+
+    /**
+     * @returns {string}
+     */
+    get type() {
+        return this.state?.type;
+    }
+}
+
+class ColumnScoreBlock extends ScoreBlock {
+    constructor({state, letter, row, color, selected = false, element, value = 0, claimedBy = [] }) {
+        super({ letter, row, color, selected, element, value, type: ScoreBlock.TYPE_COLUMN_SCORE, claimedBy });
+
+        this.blockState = state || 'default';
+    }
+
+    set blockState(value) {
+        const values = ['default', 'active', 'taken'];
+        value = (values.indexOf(value) === -1) ? 'default' : value;
+
+        this.state.blockState = value;
+        if (this.element) {
+            values.forEach(className => this.element.classList.remove(className));
+            this.element.classList.add(value);
+        }
+    }
+
+    get blockState() {
+        // default, active, or taken
+        return this.state?.blockState;
+    }
+
+    render() {
+        const tpl = `
+            <span 
+                class="rounded-block column-score${this.blockState !== 'default' ? ' ' + this.blockState : ''}" 
+                data-letter="${this.letter}" 
+                data-row="${this.row}"
+                data-type="${this.type}">
+                    ${this.value}
+            </span>
+        `;
+        this.element = tpl;
+
+        delegate('#app', `[data-type="${this.type}"][data-letter="${this.letter}"][data-row="${this.row}"]`, 'click', event => {
+            this.onClick({event});
+        });
+
+        return tpl;
+    }
+
+    onClick({event}) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        const {letter, type, row} = this;
+        this.element = ColumnScoreBlock.getByProperties({letter, type, row});
+
+        switch (this.blockState) {
+            case 'default':
+                // Toggle selected
+                this.blockState = 'active';
+                break;
+            case 'active':
+                // Toggle to taken
+                this.blockState = 'taken';
+                break;
+            case 'taken':
+                // Toggle to default
+                this.blockState = 'default';
+                break;
+        }
+    }
+
+    static getByProperties({letter, type, row}) {
+        return document.querySelector(`[data-type="${type}"][data-letter="${letter}"][data-row="${row}"]`);
     }
 }
 
@@ -439,11 +922,56 @@ class Layout {
         `);
     }
 
-    static renderPlayer(player) {
+    static renderPlayer({player}) {
         return `<li class="player" data-player="${player.username}" data-player-id="${player.userId}">${player.username}</li>`;
     }
     static renderPlayerAvatar({url, playerName}) {
         return `<img src="${url}" alt="${playerName}"/><span>${playerName}</span>`;
+    }
+    static renderJoker({joker}) {
+        return `<span class="joker${joker.selected ? ' used' : ''}">!</span>`;
+    }
+    static renderJokers({jokers}) {
+        $('jokerContainer').innerHTML = jokers
+            .map(joker => Layout.renderJoker({joker}))
+            .join('');
+    }
+    static renderGrid({columns}) {
+        const blockGrid = $('blockGrid');
+        blockGrid.innerHTML = '';
+        columns.forEach(column => {
+            blockGrid.append(Layout.renderGridColumn({column}));
+        });
+    }
+    static renderGridColumn({column}) {
+        const letter = column.column;
+        return R(`
+            <div class="column${column.column === 'H' ? ' highlight' : ''}">
+                <span class="rounded-block header" data-letter="${letter}">${letter}</span>
+                ${ Layout.renderGridColumnBlocks({blocks: column.grid, column}) }
+                ${ Layout.renderColumnScores({column}) }
+            </div>
+        `);
+    }
+    static renderGridColumnBlocks({blocks, column}) {
+        return blocks.map((block, index) => {
+            return new GridBlock({
+                letter: column.column,
+                row: index,
+                color: block.color,
+                star: block.star,
+                selected: block.selected
+            }).render();
+        }).join('')
+    }
+    static renderColumnScores({column}) {
+        return `<div class="column-score">${
+            column.score.map((scoreObject, row) => {
+                const {value, state} = scoreObject, 
+                    letter = column.column;
+                return new ColumnScoreBlock({ letter, row, value, state }).render();
+            }).join('') 
+        }</div>`;
     }
 }
 
@@ -496,7 +1024,7 @@ class Lobby {
         const playerElement = Lobby.getPlayerElement(player);
         if (!playerElement) {
             forEachQuery('#players, #activePlayers', playerContainer => {
-                playerContainer.innerHTML += Layout.renderPlayer(player);
+                playerContainer.innerHTML += Layout.renderPlayer({player});
             });
             Lobby.loadAvatars();
         }
@@ -2735,14 +3263,6 @@ class Level {
 
         return level;
     }
-
-    static isColumnComplete(letter) {
-        const column = document.querySelectorAll(`[data-letter="${letter}"]`)[0];
-        const blocks = column.querySelectorAll('.score-block').length;
-        const selectedBlocks = column.querySelectorAll('.score-block.selected').length;
-
-        return blocks === selectedBlocks;
-    }
 }
 
 class Score {
@@ -2778,15 +3298,17 @@ class Score {
                 const {players, column} = event.detail;
                 console.log('Claim column ' + column + ' for players', players);
             });
+
+            listen(EVENTS.GRID_COLUMN_COMPLETE, letter => {
+                console.log('grid column complete');
+                this.renderColumnScore(this.columnScore);
+            });
         }
 
-        socket.on('grid:column-completed', ({columnLetter, player, first}) => {
-            const row = first ? 0 : 1;
-            const el = document.querySelectorAll(`.column-score[data-column="${columnLetter}"][data-row="${row}"]`)[0];
-            if (el) {
-                dispatch(EVENTS.SCORE_TOGGLE_COLUMN, {element: el, row, column: columnLetter});
-                dispatch(EVENTS.SCORE_RELOAD);
-            }
+        socket.on('grid:column-completed', ({columnLetter, registeredColumns}) => {
+            console.log('Reload scores', columnLetter, registeredColumns);
+
+            // const score = document.querySelector('')
         });
     }
 
@@ -3035,7 +3557,7 @@ class Player {
             Notify.show({
                 title: language.notification.playerJoined.title,
                 message: language.notification.playerJoined.message(player.username),
-                //autoHide: true
+                autoHide: true
             });
         });
     }
@@ -3297,19 +3819,21 @@ class Game {
         }
     }
 
-    updateBlockState(col, row, key, value) {
+    /**
+     * @param {GridBlock} gridBlock
+     */
+    updateBlockState({gridBlock}) {
         let currentState = this.state;
-        let found = false;
+        let updateState = false;
         currentState.grid.forEach((stateColumn, stateIndex) => {
-            if (stateColumn.column === col) {
-                currentState.grid[stateIndex].grid[row][key] = value;
-                found = true;
+            if (stateColumn.column === gridBlock.letter) {
+                currentState.grid[stateIndex].grid[gridBlock.row]['selected'] = gridBlock.selected;
+                updateState = true;
             }
         });
 
-        if (found) {
+        if (updateState) {
             this.state = currentState;
-            dispatch(EVENTS.RENDER_LEVEL);
         }
     }
 
@@ -3370,7 +3894,7 @@ class Engine {
         });
 
         socket.on('grid:column-completed', ({columnLetter, player}) => {
-            if (Level.isColumnComplete(columnLetter)) {
+            if (Grid.isColumnComplete({letter: columnLetter})) {
                 // My column is complete but so is theirs.
                 Modals.claimColumn({
                     data: {player},
@@ -3424,84 +3948,42 @@ class Engine {
     }
 
     parseColumnGrid(state) {
-        const blockGrid = $('blockGrid');
-        blockGrid.innerHTML = '';
-        state.grid.forEach(column => {
-            blockGrid.innerHTML += this.parseColumn(column);
-        });
+        Layout.renderGrid({columns: state.grid});
 
         // Colored blocks
-        let scoreBlocks = document.querySelectorAll('.score-block:not(.final-score)');
-        Array.prototype.forEach.call(scoreBlocks, (block) => {
+        forEachQuery('.score-block:not(.final-score)', block => {
             block.addEventListener('click', (event) => {
-                event.preventDefault();
-                event.stopPropagation();
-
-                let selected = !block.classList.contains('selected');
-                this.currentGame.updateBlockState(block.dataset.column, block.dataset.row, 'selected', selected);
-                dispatch(EVENTS.GRID_BLOCK_SELECTED, {selected, block});
-                if (block.querySelectorAll('.star').length > 0) {
-                    // Has a star, update star score.
-                    dispatch(EVENTS.STAR_SELECTED, {selected, block});
-                }
+                Grid.coloredBlockHandler({block, event, currentGame: this.currentGame});
             }, false);
         });
     }
 
     parseJokerColumn(state) {
-        let jokerContainer = $('jokerContainer');
-        jokerContainer.innerHTML = state.jokers.map(joker => {
-            return `<span class="joker${joker.selected ? ' used' : ''}">!</span>`
-        }).join('');
+        Layout.renderJokers({jokers: state.jokers});
 
         // Joker events
-        let jokers = document.getElementsByClassName('joker');
-        Array.prototype.forEach.call(jokers, (joker, index) => {
+        forEachQuery('.joker', (joker, index) => {
             joker.addEventListener('click', (event) => {
-                event.preventDefault();
-                event.stopPropagation();
-
-                let selected = !joker.classList.contains('used');
-                this.currentGame.updateJokerState(index, selected);
-                dispatch(EVENTS.JOKER_SELECTED, {joker, selected});
+                Grid.jokerHandler({joker, currentGame: this.currentGame, index, event});
             }, false);
         });
     }
 
     parseScoreColumns(state) {
+        const valueClass = (value) => {
+            if (value === -1) return ' selected';
+            if (value === 5 || value === 3) return ' final-selected';
+            return '';
+        };
+
+        console.log(state.colorScores.high);
         $('scoreColumn1').innerHTML = state.colorScores.high.map(colorScore => {
-            const valueClass = (value) => {
-                if (value === -1) return ' selected';
-                if (value === 5) return ' final-selected';
-                return '';
-            };
-
-            return `<span class="score-block final-score ${colorScore.color}${valueClass(colorScore.value)}"><span>5</span></span>`;
+            return `<span class="score-block final-score ${colorScore.color}${valueClass(colorScore.value)}" data-color="${colorScore.color}" data-type="colorScore" data-va><span>${colorScore.value}</span></span>`;
         }).join('');
-        // state.colorScores.high.forEach(colorScore => {
-        //     let element = createElement('span', {className: 'score-block final-score ' + colorScore.color});
-        //     if (colorScore.value === -1) {
-        //         element.classList.add('selected');
-        //     }
-        //     if (colorScore.value === 5) {
-        //         element.classList.add('final-selected');
-        //     }
-        //     createElement('span', {innerText: 5}, element);
-        //     $('scoreColumn1').append(element);
-        // });
 
-        $('scoreColumn2').innerHTML = '';
-        state.colorScores.low.forEach(colorScore => {
-            let element = createElement('span', {className: 'score-block final-score ' + colorScore.color});
-            if (colorScore.value === -1) {
-                element.classList.add('selected');
-            }
-            if (colorScore.value === 3) {
-                element.classList.add('final-selected');
-            }
-            createElement('span', {innerText: 3}, element);
-            $('scoreColumn2').append(element);
-        });
+        $('scoreColumn2').innerHTML = state.colorScores.low.map(colorScore => {
+            return `<span class="score-block final-score ${colorScore.color}${valueClass(colorScore.value)}"><span>3</span></span>`;
+        }).join('');
 
 
         // Final score toggles
@@ -3559,19 +4041,19 @@ class Engine {
         });
 
         // Column scores
-        let columnScores = document.querySelectorAll('span.column-score');
-        Array.prototype.forEach.call(columnScores, (columnScore) => {
-            columnScore.addEventListener('click', (event) => {
-                event.preventDefault();
-                event.stopPropagation();
-
-                dispatch(EVENTS.SCORE_TOGGLE_COLUMN, {
-                    column: columnScore.dataset.column,
-                    element: columnScore
-                });
-                dispatch(EVENTS.SCORE_RELOAD);
-            }, false);
-        });
+        document.querySelectorAll('span.column-score');
+        // Array.prototype.forEach.call(columnScores, (columnScore) => {
+        //     columnScore.addEventListener('click', (event) => {
+        //         event.preventDefault();
+        //         event.stopPropagation();
+        //
+        //         dispatch(EVENTS.SCORE_TOGGLE_COLUMN, {
+        //             column: columnScore.dataset.column,
+        //             element: columnScore
+        //         })
+        //         dispatch(EVENTS.SCORE_RELOAD);
+        //     }, false);
+        // });
     }
 
     parseGrid() {
@@ -3636,42 +4118,7 @@ class Engine {
     }
 
     parseColumn(column) {
-        let blocks = column.grid.length, selectedBlocks = 0;
 
-        let tpl = `
-            <div class="column${column.column === 'H' ? ' highlight' : ''}">
-                <span class="rounded-block header" data-letter="${column.column}">${column.column}</span>
-                ${renderColumnBlocks(column.grid)}
-                <div class="column-score">${renderColumnScores(column.score)}</div>
-            </div>
-        `;
-
-        // create grid blocks
-        function renderColumnBlocks(blocks) {
-            return blocks.map((block, index) => {
-                if (block.selected) selectedBlocks++;
-
-                return `
-                    <span class="score-block${block.selected ? ' selected' : ''} ${block.color}" data-column="${column.column}" data-row="${index}">
-                        ${block.star ? `<span class="star">*</span>` : ``}
-                    </span>
-                `;
-            }).join('');
-        }
-        // create score columns
-        //let score = createElement('div', {className: 'column-score'});
-        function renderColumnScores(scores) {
-            return scores.map((scoreObject, index) => {
-                let state = (scoreObject.state && scoreObject.state !== 'default') ? ' ' + scoreObject.state : '';
-                return `<span class="rounded-block column-score${state}" data-column="${column.column}" data-row="${index}">${scoreObject.value}</span>`;
-            }).join('');
-        }
-
-        if (blocks === selectedBlocks) {
-            socket.emit('grid:column-complete', {columnLetter: column.column});
-        }
-
-        return tpl;
     }
 }
 
@@ -3680,3 +4127,5 @@ try {
 } catch (err) {
     console.error('Failed to load game. Reset state!', err);
 }
+
+window.Block = Block;

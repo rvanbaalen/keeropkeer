@@ -166,19 +166,21 @@ export class Game {
         }
     }
 
-    updateBlockState(col, row, key, value) {
+    /**
+     * @param {GridBlock} gridBlock
+     */
+    updateBlockState({gridBlock}) {
         let currentState = this.state;
-        let found = false;
+        let updateState = false;
         currentState.grid.forEach((stateColumn, stateIndex) => {
-            if (stateColumn.column === col) {
-                currentState.grid[stateIndex].grid[row][key] = value;
-                found = true;
+            if (stateColumn.column === gridBlock.letter) {
+                currentState.grid[stateIndex].grid[gridBlock.row]['selected'] = gridBlock.selected;
+                updateState = true;
             }
         });
 
-        if (found) {
+        if (updateState) {
             this.state = currentState;
-            dispatch(EVENTS.RENDER_LEVEL);
         }
     }
 

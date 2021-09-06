@@ -53,7 +53,7 @@ export class Lobby {
         const playerElement = Lobby.getPlayerElement(player);
         if (!playerElement) {
             forEachQuery('#players, #activePlayers', playerContainer => {
-                playerContainer.innerHTML += Layout.renderPlayer(player);
+                playerContainer.innerHTML += Layout.renderPlayer({player});
             });
             Lobby.loadAvatars();
         }

@@ -33,7 +33,7 @@ export class Player {
             Notify.show({
                 title: language.notification.playerJoined.title,
                 message: language.notification.playerJoined.message(player.username),
-                //autoHide: true
+                autoHide: true
             });
         });
     }

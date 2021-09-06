@@ -150,24 +150,31 @@ span.column-score.taken {
     width: 58px;
 }
 
+[data-color="green"],
 .green {
     background: var(--green);
 }
+[data-color="blue"],
 .blue {
     background: var(--blue);
 }
+[data-color="red"],
 .red {
     background: var(--red);
 }
+[data-color="yellow"],
 .yellow {
     background: var(--yellow);
 }
+[data-color="orange"],
 .orange {
     background: var(--orange);
 }
+[data-color="white"],
 .white {
     background: #fff;
 }
+
 .final-score span {
     color: #000;
     mix-blend-mode: color-burn;

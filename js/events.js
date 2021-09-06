@@ -9,7 +9,6 @@ export const EVENTS = {
     MODAL_TOGGLE: 'modal-toggle',
     MODAL_HIDE: 'modal-hide',
     MODAL_SHOW: 'modal-show',
-    GRID_BLOCK_SELECTED: 'grid-block-selected',
     GRID_RENDER_COMPLETE: 'grid-render-complete',
     JOKER_SELECTED: 'joker-selected',
     STAR_SELECTED: 'star-selected',
@@ -21,7 +20,9 @@ export const EVENTS = {
     NAVIGATE_TO: 'navigate-to',
     NAVIGATE: 'navigate',
     NAVIGATE_BACK: 'navigate-back',
-    SCORE_COLUMN_CLAIM: 'score-column-claim'
+    SCORE_COLUMN_CLAIM: 'score-column-claim',
+    GRID_COLUMN_COMPLETE: 'grid-column-complete',
+    BLOCK_SELECTED: 'block-selected'
 };
 
 const app = $('app');

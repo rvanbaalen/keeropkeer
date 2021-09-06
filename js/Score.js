@@ -35,15 +35,17 @@ export class Score {
                 const {players, column} = event.detail;
                 console.log('Claim column ' + column + ' for players', players);
             });
+
+            listen(EVENTS.GRID_COLUMN_COMPLETE, letter => {
+                console.log('grid column complete');
+                this.renderColumnScore(this.columnScore);
+            });
         }
 
-        socket.on('grid:column-completed', ({columnLetter, player, first}) => {
-            const row = first ? 0 : 1;
-            const el = document.querySelectorAll(`.column-score[data-column="${columnLetter}"][data-row="${row}"]`)[0]
-            if (el) {
-                dispatch(EVENTS.SCORE_TOGGLE_COLUMN, {element: el, row, column: columnLetter});
-                dispatch(EVENTS.SCORE_RELOAD);
-            }
+        socket.on('grid:column-completed', ({columnLetter, registeredColumns}) => {
+            console.log('Reload scores', columnLetter, registeredColumns)
+
+            // const score = document.querySelector('')
         });
     }
 
