@@ -1,5 +1,4 @@
 import {dispatch, EVENTS} from "./events";
-import {GridBlock} from "./GridBlock";
 import {ColumnScoreBlock} from "./ScoreBlock";
 import socket from "./socket";
 
