@@ -333,7 +333,7 @@ function createNewModal(options) {
     return modal;
 }
 
-const SOCKET_SERVER = 'https://dry-peak-80209.herokuapp.com/' ;
+const SOCKET_SERVER = 'http://0.0.0.0:3000/';
 
 const io = window.io;
 const socket = io(SOCKET_SERVER, { autoConnect: false });
@@ -649,29 +649,12 @@ class ScoreBlock extends Block {
         selected = false,
         element,
         value = 0,
-        type,
-        claimedBy = []
+        type
     }) {
         super({letter, row, color, selected, element});
 
         this.type = type;
         this.value = value;
-        this.claimedBy = claimedBy;
-    }
-
-    /**
-     * @param {Array|Object} value
-     */
-    set claimedBy(value) {
-        if (!Array.isArray(value)) value = [value];
-        this.state.claimedBy = value;
-    }
-
-    /**
-     * @returns {Array}
-     */
-    get claimedBy() {
-        return this.state?.claimedBy;
     }
 
     /**
@@ -713,8 +696,8 @@ class ColumnScoreBlock extends ScoreBlock {
 
     cache;
 
-    constructor({state = ColumnScoreBlock.STATE.DEFAULT, letter, row = -1, color = 'white', selected = false, element, value = 0, claimedBy = [] }) {
-        super({ letter, row, color, selected, element, value, type: ScoreBlock.TYPE_COLUMN_SCORE, claimedBy });
+    constructor({state = ColumnScoreBlock.STATE.DEFAULT, letter, row = -1, color = 'white', selected = false, element, value = 0 }) {
+        super({ letter, row, color, selected, element, value, type: ScoreBlock.TYPE_COLUMN_SCORE });
         if (!letter || row === -1) {
             throw new Error('Need letter and row for new block instance.');
         }
@@ -729,19 +712,11 @@ class ColumnScoreBlock extends ScoreBlock {
     set storage(value) {
         GameStorage.setItem('columnScore', value);
         this.cache = value;
-
-        console.log('Set storage', this.cache);
     }
 
     get storage() {
-        if (!this.cache) {
-            this.cache = GameStorage.getItem('columnScore', {});
-        }
-
-        console.log('Get from cache', this.cache);
-        return this.cache;
+        return (!this.cache) ? GameStorage.getItem('columnScore', {}) : this.cache;
     }
-
 
     set blockState(value) {
         value = (Object.values(ColumnScoreBlock.STATE).indexOf(value) === -1) ? ColumnScoreBlock.STATE.DEFAULT : value;

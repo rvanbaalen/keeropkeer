@@ -1,7 +1,6 @@
 import {Block} from "./Block";
 import delegate from "delegate-it";
 import {GameStorage} from "./GameStorage";
-import socket from "./socket";
 
 export class ScoreBlock extends Block {
     static TYPE_COLUMN_SCORE = 'column-score';
@@ -16,29 +15,12 @@ export class ScoreBlock extends Block {
         selected = false,
         element,
         value = 0,
-        type,
-        claimedBy = []
+        type
     }) {
         super({letter, row, color, selected, element});
 
         this.type = type;
         this.value = value;
-        this.claimedBy = claimedBy;
-    }
-
-    /**
-     * @param {Array|Object} value
-     */
-    set claimedBy(value) {
-        if (!Array.isArray(value)) value = [value];
-        this.state.claimedBy = value;
-    }
-
-    /**
-     * @returns {Array}
-     */
-    get claimedBy() {
-        return this.state?.claimedBy;
     }
 
     /**
@@ -80,8 +62,8 @@ export class ColumnScoreBlock extends ScoreBlock {
 
     cache;
 
-    constructor({state = ColumnScoreBlock.STATE.DEFAULT, letter, row = -1, color = 'white', selected = false, element, value = 0, claimedBy = [] }) {
-        super({ letter, row, color, selected, element, value, type: ScoreBlock.TYPE_COLUMN_SCORE, claimedBy });
+    constructor({state = ColumnScoreBlock.STATE.DEFAULT, letter, row = -1, color = 'white', selected = false, element, value = 0 }) {
+        super({ letter, row, color, selected, element, value, type: ScoreBlock.TYPE_COLUMN_SCORE });
         if (!letter || row === -1) {
             throw new Error('Need letter and row for new block instance.');
         }
@@ -96,19 +78,11 @@ export class ColumnScoreBlock extends ScoreBlock {
     set storage(value) {
         GameStorage.setItem('columnScore', value);
         this.cache = value;
-
-        console.log('Set storage', this.cache);
     }
 
     get storage() {
-        if (!this.cache) {
-            this.cache = GameStorage.getItem('columnScore', {});
-        }
-
-        console.log('Get from cache', this.cache);
-        return this.cache;
+        return (!this.cache) ? GameStorage.getItem('columnScore', {}) : this.cache;
     }
-
 
     set blockState(value) {
         value = (Object.values(ColumnScoreBlock.STATE).indexOf(value) === -1) ? ColumnScoreBlock.STATE.DEFAULT : value;
@@ -249,24 +223,7 @@ export class ColumnScoreBlock extends ScoreBlock {
 }
 
 export class ColorScoreBlock extends ScoreBlock {
-    constructor({
-        letter,
-        row,
-        color,
-        selected = false,
-        element,
-        value = 0,
-        claimedBy = []
-    }) {
-        super({
-            letter,
-            row,
-            color,
-            selected,
-            element,
-            value,
-            type: ScoreBlock.TYPE_COLOR_SCORE,
-            claimedBy
-        });
+    constructor({ letter, row, color, selected = false, element, value = 0 }) {
+        super({ letter, row, color, selected, element, value, type: ScoreBlock.TYPE_COLOR_SCORE });
     }
 }
