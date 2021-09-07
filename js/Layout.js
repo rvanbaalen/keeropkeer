@@ -1,8 +1,6 @@
 import {$, R} from "./utilities";
-import socket from "./socket";
 import {Grid} from "./Grid";
-import {GridBlock} from "./GridBlock";
-import {ColumnScoreBlock} from "./ScoreBlock";
+import {GridBlock, ColumnScoreBlock} from "./Block";
 
 export class Layout {
     static render() {

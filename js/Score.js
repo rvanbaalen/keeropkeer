@@ -1,8 +1,7 @@
 import {$} from "./utilities.js";
-import {dispatch, EVENTS, listen, listenOnce} from "./events.js";
+import {EVENTS, listen} from "./events.js";
 import socket from "./socket";
-import {Grid} from "./Grid";
-import {ColumnScoreBlock} from "./ScoreBlock";
+import {ColumnScoreBlock} from "./Block";
 
 export class Score {
     static JOKER_VALUE = 1;

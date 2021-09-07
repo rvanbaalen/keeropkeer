@@ -26,23 +26,10 @@ export const EVENTS = {
 };
 
 const app = $('app');
-const register = {};
-
 export function dispatch(eventName, eventData) {
     let event = new CustomEvent(eventName, { detail: eventData });
     app.dispatchEvent(event);
-
-    if (register[eventName]?.once) {
-        app.removeEventListener(eventName, register[eventName].callback, false);
-    }
 }
 export function listen(eventName, callback, once = false) {
     app.addEventListener(eventName, callback, false);
-
-    if (once) {
-        register[eventName] = {once: true, callback};
-    }
-}
-export function listenOnce(eventName, callback) {
-    return listen(eventName, callback, true);
 }

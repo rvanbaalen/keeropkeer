@@ -154,22 +154,12 @@ const EVENTS = {
 };
 
 const app = $('app');
-const register = {};
-
 function dispatch(eventName, eventData) {
     let event = new CustomEvent(eventName, { detail: eventData });
     app.dispatchEvent(event);
-
-    if (register[eventName]?.once) {
-        app.removeEventListener(eventName, register[eventName].callback, false);
-    }
 }
 function listen(eventName, callback, once = false) {
     app.addEventListener(eventName, callback, false);
-
-    if (once) {
-        register[eventName] = {once: true, callback};
-    }
 }
 
 function registerModalEvents() {
@@ -334,7 +324,7 @@ function createNewModal(options) {
     return modal;
 }
 
-const SOCKET_SERVER = 'https://dry-peak-80209.herokuapp.com/' ;
+const SOCKET_SERVER = 'http://0.0.0.0:3000/';
 
 const io = window.io;
 const socket = io(SOCKET_SERVER, { autoConnect: false });
@@ -365,6 +355,89 @@ class GameStorage {
 
         return JSON.parse(value);
     }
+}
+
+/** Keeps track of raw listeners added to the base elements to avoid duplication */
+const ledger = new WeakMap();
+function editLedger(wanted, baseElement, callback, setup) {
+    var _a, _b;
+    if (!wanted && !ledger.has(baseElement)) {
+        return false;
+    }
+    const elementMap = (_a = ledger.get(baseElement)) !== null && _a !== void 0 ? _a : new WeakMap();
+    ledger.set(baseElement, elementMap);
+    if (!wanted && !ledger.has(baseElement)) {
+        return false;
+    }
+    const setups = (_b = elementMap.get(callback)) !== null && _b !== void 0 ? _b : new Set();
+    elementMap.set(callback, setups);
+    const existed = setups.has(setup);
+    if (wanted) {
+        setups.add(setup);
+    }
+    else {
+        setups.delete(setup);
+    }
+    return existed && wanted;
+}
+function isEventTarget(elements) {
+    return typeof elements.addEventListener === 'function';
+}
+function safeClosest(event, selector) {
+    let target = event.target;
+    if (target instanceof Text) {
+        target = target.parentElement;
+    }
+    if (target instanceof Element && event.currentTarget instanceof Element) {
+        // `.closest()` may match ancestors of `currentTarget` but we only need its children
+        const closest = target.closest(selector);
+        if (closest && event.currentTarget.contains(closest)) {
+            return closest;
+        }
+    }
+}
+// This type isn't exported as a declaration, so it needs to be duplicated above
+function delegate(base, selector, type, callback, options) {
+    // Handle Selector-based usage
+    if (typeof base === 'string') {
+        base = document.querySelectorAll(base);
+    }
+    // Handle Array-like based usage
+    if (!isEventTarget(base)) {
+        const subscriptions = Array.prototype.map.call(base, (element) => {
+            return delegate(element, selector, type, callback, options);
+        });
+        return {
+            destroy() {
+                for (const subscription of subscriptions) {
+                    subscription.destroy();
+                }
+            }
+        };
+    }
+    // `document` should never be the base, it's just an easy way to define "global event listeners"
+    const baseElement = base instanceof Document ? base.documentElement : base;
+    // Handle the regular Element usage
+    const capture = Boolean(typeof options === 'object' ? options.capture : options);
+    const listenerFn = (event) => {
+        const delegateTarget = safeClosest(event, selector);
+        if (delegateTarget) {
+            event.delegateTarget = delegateTarget;
+            callback.call(baseElement, event);
+        }
+    };
+    const setup = JSON.stringify({ selector, type, capture });
+    const isAlreadyListening = editLedger(true, baseElement, callback, setup);
+    const delegateSubscription = {
+        destroy() {
+            baseElement.removeEventListener(type, listenerFn, options);
+            editLedger(false, baseElement, callback, setup);
+        }
+    };
+    if (!isAlreadyListening) {
+        baseElement.addEventListener(type, listenerFn, options);
+    }
+    return delegateSubscription;
 }
 
 class Block {
@@ -502,87 +575,84 @@ class Block {
     }
 }
 
-/** Keeps track of raw listeners added to the base elements to avoid duplication */
-const ledger = new WeakMap();
-function editLedger(wanted, baseElement, callback, setup) {
-    var _a, _b;
-    if (!wanted && !ledger.has(baseElement)) {
-        return false;
+class GridBlock extends Block {
+    constructor({letter, row, color, star = false, selected = false, element}) {
+        super({letter, row, color, selected, element});
+        this.state.star = star;
     }
-    const elementMap = (_a = ledger.get(baseElement)) !== null && _a !== void 0 ? _a : new WeakMap();
-    ledger.set(baseElement, elementMap);
-    if (!wanted && !ledger.has(baseElement)) {
-        return false;
-    }
-    const setups = (_b = elementMap.get(callback)) !== null && _b !== void 0 ? _b : new Set();
-    elementMap.set(callback, setups);
-    const existed = setups.has(setup);
-    if (wanted) {
-        setups.add(setup);
-    }
-    else {
-        setups.delete(setup);
-    }
-    return existed && wanted;
-}
-function isEventTarget(elements) {
-    return typeof elements.addEventListener === 'function';
-}
-function safeClosest(event, selector) {
-    let target = event.target;
-    if (target instanceof Text) {
-        target = target.parentElement;
-    }
-    if (target instanceof Element && event.currentTarget instanceof Element) {
-        // `.closest()` may match ancestors of `currentTarget` but we only need its children
-        const closest = target.closest(selector);
-        if (closest && event.currentTarget.contains(closest)) {
-            return closest;
-        }
-    }
-}
-// This type isn't exported as a declaration, so it needs to be duplicated above
-function delegate(base, selector, type, callback, options) {
-    // Handle Selector-based usage
-    if (typeof base === 'string') {
-        base = document.querySelectorAll(base);
-    }
-    // Handle Array-like based usage
-    if (!isEventTarget(base)) {
-        const subscriptions = Array.prototype.map.call(base, (element) => {
-            return delegate(element, selector, type, callback, options);
+
+    render() {
+        // Create the block, add event listeners
+        const tpl = `
+            <span 
+                class="score-block${this.selected ? ' selected' : ''}"
+                data-type="score-block" 
+                data-letter="${this.letter}" 
+                data-row="${this.row}" 
+                data-color="${this.color}">
+                ${this.star ? `<span class="star">*</span>` : ''}    
+            </span>
+        `;
+
+        this.element = tpl;
+
+        delegate('#app', `[data-type="score-block"][data-letter="${this.letter}"][data-row="${this.row}"]`, 'click', event => {
+            this.refresh();
+            this.onClick({event});
         });
-        return {
-            destroy() {
-                for (const subscription of subscriptions) {
-                    subscription.destroy();
-                }
-            }
-        };
+
+        return tpl;
     }
-    // `document` should never be the base, it's just an easy way to define "global event listeners"
-    const baseElement = base instanceof Document ? base.documentElement : base;
-    // Handle the regular Element usage
-    const capture = Boolean(typeof options === 'object' ? options.capture : options);
-    const listenerFn = (event) => {
-        const delegateTarget = safeClosest(event, selector);
-        if (delegateTarget) {
-            event.delegateTarget = delegateTarget;
-            callback.call(baseElement, event);
-        }
-    };
-    const setup = JSON.stringify({ selector, type, capture });
-    const isAlreadyListening = editLedger(true, baseElement, callback, setup);
-    const delegateSubscription = {
-        destroy() {
-            baseElement.removeEventListener(type, listenerFn, options);
-            editLedger(false, baseElement, callback, setup);
-        }
-    };
-    if (!isAlreadyListening) {
-        baseElement.addEventListener(type, listenerFn, options);
+
+    refresh() {
+        this.element = document.querySelector(`[data-type="score-block"][data-letter="${this.letter}"][data-row="${this.row}"]`);
     }
-    return delegateSubscription;
+
+    onClick({event}) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        // Update selected state
+        this.selected = !this.selected;
+
+        // Save new block state to game cache
+        dispatch(EVENTS.UPDATE_GRID_BLOCK, {gridBlock: this});
+
+        // Check if row is completed
+        Grid.setColumnScoreState({letter: this.letter, shouldEmit: true});
+
+        dispatch(EVENTS.SCORE_COLUMN_UPDATE);
+        //Grid.coloredBlockHandler({block:this.element, event, currentGame: this.currentGame});
+    }
+
+    get star() {
+        return this.state?.star;
+    }
+
+    set star(value) {
+        this.state.star = !!value;
+    }
+
+    onSelected() {
+        super.onSelected();
+        if (this.star) {
+            dispatch(EVENTS.STAR_SELECTED, {selected: this.selected, block: this});
+        }
+    }
+
+    /**
+     * @param element
+     * @returns {GridBlock}
+     */
+    static getInstance(element) {
+        if (typeof element === 'string') element = document.querySelector(element);
+        if (element.length > 1) element = element[0];
+
+        const star = !!element.querySelector('span.star');
+        const selected = element.classList.contains('selected');
+        const {letter, row, color} = element.dataset;
+        return new GridBlock({letter, row, color, star, selected, element});
+    }
 }
 
 class ScoreBlock extends Block {
@@ -592,14 +662,14 @@ class ScoreBlock extends Block {
     #DEFAULT_VALUE = 0;
 
     constructor({
-        letter,
-        row,
-        color,
-        selected = false,
-        element,
-        value = 0,
-        type
-    }) {
+                    letter,
+                    row,
+                    color,
+                    selected = false,
+                    element,
+                    value = 0,
+                    type
+                }) {
         super({letter, row, color, selected, element});
 
         this.type = type;
@@ -856,86 +926,6 @@ class Grid {
         const selectedBlocks = columnElement.querySelectorAll('.score-block.selected').length;
 
         return selectedBlocks === 7;
-    }
-}
-
-class GridBlock extends Block {
-    constructor({letter, row, color, star = false, selected = false, element}) {
-        super({letter, row, color, selected, element});
-        this.state.star = star;
-    }
-
-    render() {
-        // Create the block, add event listeners
-        const tpl = `
-            <span 
-                class="score-block${this.selected ? ' selected' : ''}"
-                data-type="score-block" 
-                data-letter="${this.letter}" 
-                data-row="${this.row}" 
-                data-color="${this.color}">
-                ${this.star ? `<span class="star">*</span>` : ''}    
-            </span>
-        `;
-
-        this.element = tpl;
-
-        delegate('#app', `[data-type="score-block"][data-letter="${this.letter}"][data-row="${this.row}"]`, 'click', event => {
-            this.refresh();
-            this.onClick({event});
-        });
-
-        return tpl;
-    }
-
-    refresh() {
-        this.element = document.querySelector(`[data-type="score-block"][data-letter="${this.letter}"][data-row="${this.row}"]`);
-    }
-
-    onClick({event}) {
-        event.preventDefault();
-        event.stopPropagation();
-
-        // Update selected state
-        this.selected = !this.selected;
-
-        // Save new block state to game cache
-        dispatch(EVENTS.UPDATE_GRID_BLOCK, {gridBlock: this});
-
-        // Check if row is completed
-        Grid.setColumnScoreState({letter: this.letter, shouldEmit: true});
-
-        dispatch(EVENTS.SCORE_COLUMN_UPDATE);
-        //Grid.coloredBlockHandler({block:this.element, event, currentGame: this.currentGame});
-    }
-
-    get star() {
-        return this.state?.star;
-    }
-
-    set star(value) {
-        this.state.star = !!value;
-    }
-
-    onSelected() {
-        super.onSelected();
-        if (this.star) {
-            dispatch(EVENTS.STAR_SELECTED, {selected: this.selected, block: this});
-        }
-    }
-
-    /**
-     * @param element
-     * @returns {GridBlock}
-     */
-    static getInstance(element) {
-        if (typeof element === 'string') element = document.querySelector(element);
-        if (element.length > 1) element = element[0];
-
-        const star = !!element.querySelector('span.star');
-        const selected = element.classList.contains('selected');
-        const {letter, row, color} = element.dataset;
-        return new GridBlock({letter, row, color, star, selected, element});
     }
 }
 
