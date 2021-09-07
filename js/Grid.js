@@ -39,23 +39,6 @@ export class Grid {
                 }
             });
     }
-    static coloredBlockHandler({event, block, currentGame}) {
-        event.preventDefault();
-        event.stopPropagation();
-
-        // Update selected state
-        let gridBlock = GridBlock.getInstance(block);
-        gridBlock.selected = !gridBlock.selected;
-
-        // Save new block state to game cache
-        currentGame.updateBlockState({gridBlock});
-
-        const {letter} = gridBlock;
-        // Check if row is completed
-        Grid.setColumnScoreState({letter, shouldEmit: true});
-
-        dispatch(EVENTS.SCORE_COLUMN_UPDATE);
-    }
 
     static jokerHandler({joker, currentGame, index, event}) {
         event.preventDefault();

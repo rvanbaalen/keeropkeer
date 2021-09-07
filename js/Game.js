@@ -42,6 +42,10 @@ export class Game {
             // ahead and render the game
             this.continue();
         });
+        listen(EVENTS.UPDATE_GRID_BLOCK, (event) => {
+            const {gridBlock} = event.detail;
+            this.updateBlockState({gridBlock});
+        });
     }
 
     initialize() {

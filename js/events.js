@@ -21,7 +21,8 @@ export const EVENTS = {
     NAVIGATE_BACK: 'navigate-back',
     SCORE_COLUMN_CLAIM: 'score-column-claim',
     SCORE_COLUMN_UPDATE: 'score-column-update',
-    BLOCK_SELECTED: 'block-selected'
+    BLOCK_SELECTED: 'block-selected',
+    UPDATE_GRID_BLOCK: 'update-grid-block'
 };
 
 const app = $('app');

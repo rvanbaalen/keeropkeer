@@ -149,7 +149,8 @@ const EVENTS = {
     NAVIGATE_BACK: 'navigate-back',
     SCORE_COLUMN_CLAIM: 'score-column-claim',
     SCORE_COLUMN_UPDATE: 'score-column-update',
-    BLOCK_SELECTED: 'block-selected'
+    BLOCK_SELECTED: 'block-selected',
+    UPDATE_GRID_BLOCK: 'update-grid-block'
 };
 
 const app = $('app');
@@ -501,58 +502,6 @@ class Block {
     }
 }
 
-class GridBlock extends Block {
-    constructor({letter, row, color, star = false, selected = false, element}) {
-        super({letter, row, color, selected, element});
-        this.state.star = star;
-    }
-
-    render() {
-        // Create the block, add event listeners
-        const tpl = `
-            <span 
-                class="score-block${this.selected ? ' selected' : ''}" 
-                data-letter="${this.letter}" 
-                data-row="${this.row}" 
-                data-color="${this.color}">
-                ${this.star ? `<span class="star">*</span>` : ''}    
-            </span>
-        `;
-
-        this.element = tpl;
-        return tpl;
-    }
-
-    get star() {
-        return this.state?.star;
-    }
-
-    set star(value) {
-        this.state.star = !!value;
-    }
-
-    onSelected() {
-        super.onSelected();
-        if (this.star) {
-            dispatch(EVENTS.STAR_SELECTED, {selected: this.selected, block: this});
-        }
-    }
-
-    /**
-     * @param element
-     * @returns {GridBlock}
-     */
-    static getInstance(element) {
-        if (typeof element === 'string') element = document.querySelector(element);
-        if (element.length > 1) element = element[0];
-
-        const star = !!element.querySelector('span.star');
-        const selected = element.classList.contains('selected');
-        const {letter, row, color} = element.dataset;
-        return new GridBlock({letter, row, color, star, selected, element});
-    }
-}
-
 /** Keeps track of raw listeners added to the base elements to avoid duplication */
 const ledger = new WeakMap();
 function editLedger(wanted, baseElement, callback, setup) {
@@ -634,6 +583,86 @@ function delegate(base, selector, type, callback, options) {
         baseElement.addEventListener(type, listenerFn, options);
     }
     return delegateSubscription;
+}
+
+class GridBlock extends Block {
+    constructor({letter, row, color, star = false, selected = false, element}) {
+        super({letter, row, color, selected, element});
+        this.state.star = star;
+    }
+
+    render() {
+        // Create the block, add event listeners
+        const tpl = `
+            <span 
+                class="score-block${this.selected ? ' selected' : ''}"
+                data-type="score-block" 
+                data-letter="${this.letter}" 
+                data-row="${this.row}" 
+                data-color="${this.color}">
+                ${this.star ? `<span class="star">*</span>` : ''}    
+            </span>
+        `;
+
+        this.element = tpl;
+
+        delegate('#app', `[data-type="score-block"][data-letter="${this.letter}"][data-row="${this.row}"]`, 'click', event => {
+            this.refresh();
+            this.onClick({event});
+        });
+
+        return tpl;
+    }
+
+    refresh() {
+        this.element = document.querySelector(`[data-type="score-block"][data-letter="${this.letter}"][data-row="${this.row}"]`);
+    }
+
+    onClick({event}) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        // Update selected state
+        this.selected = !this.selected;
+
+        // Save new block state to game cache
+        dispatch(EVENTS.UPDATE_GRID_BLOCK, {gridBlock: this});
+
+        // Check if row is completed
+        Grid.setColumnScoreState({letter: this.letter, shouldEmit: true});
+
+        dispatch(EVENTS.SCORE_COLUMN_UPDATE);
+        //Grid.coloredBlockHandler({block:this.element, event, currentGame: this.currentGame});
+    }
+
+    get star() {
+        return this.state?.star;
+    }
+
+    set star(value) {
+        this.state.star = !!value;
+    }
+
+    onSelected() {
+        super.onSelected();
+        if (this.star) {
+            dispatch(EVENTS.STAR_SELECTED, {selected: this.selected, block: this});
+        }
+    }
+
+    /**
+     * @param element
+     * @returns {GridBlock}
+     */
+    static getInstance(element) {
+        if (typeof element === 'string') element = document.querySelector(element);
+        if (element.length > 1) element = element[0];
+
+        const star = !!element.querySelector('span.star');
+        const selected = element.classList.contains('selected');
+        const {letter, row, color} = element.dataset;
+        return new GridBlock({letter, row, color, star, selected, element});
+    }
 }
 
 class ScoreBlock extends Block {
@@ -891,23 +920,6 @@ class Grid {
                     }
                 }
             });
-    }
-    static coloredBlockHandler({event, block, currentGame}) {
-        event.preventDefault();
-        event.stopPropagation();
-
-        // Update selected state
-        let gridBlock = GridBlock.getInstance(block);
-        gridBlock.selected = !gridBlock.selected;
-
-        // Save new block state to game cache
-        currentGame.updateBlockState({gridBlock});
-
-        const {letter} = gridBlock;
-        // Check if row is completed
-        Grid.setColumnScoreState({letter, shouldEmit: true});
-
-        dispatch(EVENTS.SCORE_COLUMN_UPDATE);
     }
 
     static jokerHandler({joker, currentGame, index, event}) {
@@ -3787,6 +3799,10 @@ class Game {
             // ahead and render the game
             this.continue();
         });
+        listen(EVENTS.UPDATE_GRID_BLOCK, (event) => {
+            const {gridBlock} = event.detail;
+            this.updateBlockState({gridBlock});
+        });
     }
 
     initialize() {
@@ -4014,13 +4030,6 @@ class Engine {
 
     parseColumnGrid(state) {
         Layout.renderGrid({columns: state.grid});
-
-        // Colored blocks
-        forEachQuery('.score-block:not(.final-score)', block => {
-            block.addEventListener('click', (event) => {
-                Grid.coloredBlockHandler({block, event, currentGame: this.currentGame});
-            }, false);
-        });
     }
 
     parseJokerColumn(state) {
@@ -4035,18 +4044,13 @@ class Engine {
     }
 
     parseScoreColumns(state) {
-        const valueClass = (value) => {
-            if (value === -1) return ' selected';
-            if (value === 5 || value === 3) return ' final-selected';
-            return '';
-        };
 
         $('scoreColumn1').innerHTML = state.colorScores.high.map(colorScore => {
-            return `<span class="score-block final-score ${colorScore.color}${valueClass(5)}" data-color="${colorScore.color}" data-type="colorScore" data-value="5"><span>5</span></span>`;
+            return `<span class="score-block final-score ${colorScore.color}" data-color="${colorScore.color}" data-type="colorScore" data-value="5"><span>5</span></span>`;
         }).join('');
 
         $('scoreColumn2').innerHTML = state.colorScores.low.map(colorScore => {
-            return `<span class="score-block final-score ${colorScore.color}${valueClass(3)}" data-color="${colorScore.color}" data-type="colorScore" data-value="3"><span>3</span></span>`;
+            return `<span class="score-block final-score ${colorScore.color}" data-color="${colorScore.color}" data-type="colorScore" data-value="3"><span>3</span></span>`;
         }).join('');
 
 

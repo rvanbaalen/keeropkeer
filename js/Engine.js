@@ -81,13 +81,6 @@ export class Engine {
 
     parseColumnGrid(state) {
         Layout.renderGrid({columns: state.grid});
-
-        // Colored blocks
-        forEachQuery('.score-block:not(.final-score)', block => {
-            block.addEventListener('click', (event) => {
-                Grid.coloredBlockHandler({block, event, currentGame: this.currentGame});
-            }, false);
-        });
     }
 
     parseJokerColumn(state) {
@@ -109,11 +102,11 @@ export class Engine {
         }
 
         $('scoreColumn1').innerHTML = state.colorScores.high.map(colorScore => {
-            return `<span class="score-block final-score ${colorScore.color}${valueClass(5)}" data-color="${colorScore.color}" data-type="colorScore" data-value="5"><span>5</span></span>`;
+            return `<span class="score-block final-score ${colorScore.color}" data-color="${colorScore.color}" data-type="colorScore" data-value="5"><span>5</span></span>`;
         }).join('');
 
         $('scoreColumn2').innerHTML = state.colorScores.low.map(colorScore => {
-            return `<span class="score-block final-score ${colorScore.color}${valueClass(3)}" data-color="${colorScore.color}" data-type="colorScore" data-value="3"><span>3</span></span>`;
+            return `<span class="score-block final-score ${colorScore.color}" data-color="${colorScore.color}" data-type="colorScore" data-value="3"><span>3</span></span>`;
         }).join('');
 
 
