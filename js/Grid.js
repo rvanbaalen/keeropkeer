@@ -1,4 +1,3 @@
-import {dispatch, EVENTS} from "./events";
 import {ColumnScoreBlock} from "./Block";
 import socket from "./socket";
 
