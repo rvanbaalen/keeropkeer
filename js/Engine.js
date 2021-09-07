@@ -35,16 +35,6 @@ export class Engine {
             this.render();
         });
 
-        socket.on('grid:column-completed', ({columnLetter, player}) => {
-            if (Grid.isColumnComplete({letter: columnLetter})) {
-                // My column is complete but so is theirs.
-                Modals.claimColumn({
-                    data: {player},
-                    message: `A player just finished column ${columnLetter}. Do you also want to claim the column score in this round?`
-                });
-            }
-        });
-
         socket.on('version', version => {
             GameStorage.setItem('version', version);
         });
@@ -181,21 +171,6 @@ export class Engine {
                 dispatch(EVENTS.SCORE_RELOAD);
             }, false);
         });
-
-        // Column scores
-        let columnScores = document.querySelectorAll('span.column-score');
-        // Array.prototype.forEach.call(columnScores, (columnScore) => {
-        //     columnScore.addEventListener('click', (event) => {
-        //         event.preventDefault();
-        //         event.stopPropagation();
-        //
-        //         dispatch(EVENTS.SCORE_TOGGLE_COLUMN, {
-        //             column: columnScore.dataset.column,
-        //             element: columnScore
-        //         })
-        //         dispatch(EVENTS.SCORE_RELOAD);
-        //     }, false);
-        // });
     }
 
     parseGrid() {

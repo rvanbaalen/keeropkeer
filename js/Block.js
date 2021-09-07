@@ -52,7 +52,7 @@ export class Block {
      * @param {int} value
      */
     set row(value) {
-        this.state.row = value;
+        this.state.row = parseInt(value);
     }
 
     /**

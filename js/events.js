@@ -21,7 +21,7 @@ export const EVENTS = {
     NAVIGATE: 'navigate',
     NAVIGATE_BACK: 'navigate-back',
     SCORE_COLUMN_CLAIM: 'score-column-claim',
-    GRID_COLUMN_COMPLETE: 'grid-column-complete',
+    SCORE_COLUMN_UPDATE: 'score-column-update',
     BLOCK_SELECTED: 'block-selected'
 };
 

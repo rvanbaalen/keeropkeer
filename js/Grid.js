@@ -1,36 +1,57 @@
 import {dispatch, EVENTS} from "./events";
-import socket from "./socket";
 import {GridBlock} from "./GridBlock";
+import {ColumnScoreBlock} from "./ScoreBlock";
+import socket from "./socket";
 
 export class Grid {
+    static toggleCompletedColumn({letter, shouldEmit = false}) {
+        let activateBlock = ColumnScoreBlock
+            .getAll({letter})
+            .filter(block => block.isActive())
+            .length === 0
+
+        if (activateBlock) {
+            let block =
+                ColumnScoreBlock.getFirstAvailable({letter});
+            block?.active();
+
+            if (block.isHighScore() && shouldEmit) {
+                socket.emit('grid:column-complete', {letter});
+            }
+        }
+    }
+    static clearColumnScore({letter, shouldEmit = false}) {
+        ColumnScoreBlock.getAll({letter})
+            .forEach(block => {
+                if (block.isActive()) {
+                    block.default();
+                    if (block.isHighScore() && shouldEmit) {
+                        socket.emit('grid:column-clear', {letter});
+                    }
+                }
+            });
+    }
     static coloredBlockHandler({event, block, currentGame}) {
         event.preventDefault();
         event.stopPropagation();
 
+        // Update selected state
         let gridBlock = GridBlock.getInstance(block);
         gridBlock.selected = !gridBlock.selected;
 
-        // let selected = !block.classList.contains('selected');
+        // Save new block state to game cache
         currentGame.updateBlockState({gridBlock});
 
-        // if (block.querySelectorAll('.star').length > 0) {
-        //     // Has a star, update star score.
-        //     dispatch(EVENTS.STAR_SELECTED, {selected, block});
-        // }
-        //
-        // const letter = block.dataset.column;
-        // if (Grid.isColumnComplete({letter})) {
-        //     console.log('grid complete', letter);
-        //     const scoreElement = (high) => document.querySelector(`.column-score[data-column="${letter}"][data-row="${high ? 0 : 1}"]`);
-        //     const highScore = !scoreElement(true).classList.contains('taken');
-        //     if (highScore) {
-        //         scoreElement(true).classList.add('active');
-        //     } else {
-        //         scoreElement(false).classList.add('active');
-        //     }
-        //     socket.emit('grid:column-complete', {columnLetter: letter, highScore});
-        //     dispatch(EVENTS.GRID_COLUMN_COMPLETE, {letter});
-        // }
+        const {letter} = gridBlock;
+        // Check if row is completed
+        if (Grid.isColumnComplete({letter})) {
+            Grid.toggleCompletedColumn({letter, shouldEmit: true})
+        } else {
+            // Column is not complete
+            Grid.clearColumnScore({letter, shouldEmit: true});
+        }
+
+        dispatch(EVENTS.SCORE_COLUMN_UPDATE);
     }
 
     static jokerHandler({joker, currentGame, index, event}) {

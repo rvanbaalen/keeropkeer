@@ -1,6 +1,8 @@
 import {$} from "./utilities.js";
 import {dispatch, EVENTS, listen, listenOnce} from "./events.js";
 import socket from "./socket";
+import {Grid} from "./Grid";
+import {ColumnScoreBlock} from "./ScoreBlock";
 
 export class Score {
     static JOKER_VALUE = 1;
@@ -31,21 +33,22 @@ export class Score {
 
             listen(EVENTS.SCORE_TOTAL_TOGGLE, () => this.toggleTotalScore());
 
-            listen(EVENTS.SCORE_COLUMN_CLAIM, (event) => {
-                const {players, column} = event.detail;
-                console.log('Claim column ' + column + ' for players', players);
-            });
-
-            listen(EVENTS.GRID_COLUMN_COMPLETE, letter => {
-                console.log('grid column complete');
+            listen(EVENTS.SCORE_COLUMN_UPDATE, letter => {
                 this.renderColumnScore(this.columnScore);
             });
         }
 
-        socket.on('grid:column-completed', ({columnLetter, registeredColumns}) => {
-            console.log('Reload scores', columnLetter, registeredColumns)
-
-            // const score = document.querySelector('')
+        socket.on('grid:column-completed', ({letter}) => {
+            ColumnScoreBlock
+                .getAll({letter})
+                .filter(block => block.isHighScore() && !block.active())
+                .forEach(block => block.taken());
+        });
+        socket.on('grid:column-cleared', ({letter}) => {
+            ColumnScoreBlock
+                .getAll({letter})
+                .filter(block => block.isTaken())
+                .forEach(block => block.default());
         });
     }
 

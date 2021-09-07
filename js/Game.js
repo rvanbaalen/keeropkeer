@@ -143,7 +143,6 @@ export class Game {
     set state(value) {
         this.#cachedState = value;
         if (!value) {
-            console.log('Clearing local state');
             GameStorage.removeItem('state');
         } else {
             GameStorage.setItem('state', value);
