@@ -1,6 +1,6 @@
 import {$, R} from "./utilities";
 import {Grid} from "./Grid";
-import {GridBlock, ColumnScoreBlock} from "./Block";
+import {GridBlock, ColumnScoreBlock, JokerScoreBlock} from "./Block";
 
 export class Layout {
     static render() {
@@ -107,12 +107,9 @@ export class Layout {
     static renderPlayerAvatar({url, playerName}) {
         return `<img src="${url}" alt="${playerName}"/><span>${playerName}</span>`;
     }
-    static renderJoker({joker}) {
-        return `<span class="joker${joker.selected ? ' used' : ''}">!</span>`;
-    }
     static renderJokers({jokers}) {
         $('jokerContainer').innerHTML = jokers
-            .map(joker => Layout.renderJoker({joker}))
+            .map((joker, index) => new JokerScoreBlock({joker, row: index}).render())
             .join('');
     }
     static renderGrid({columns}) {

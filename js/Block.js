@@ -76,15 +76,19 @@ export class Block {
         }
     }
 
+    get selectedClass() {
+        return 'selected';
+    }
+
     onSelected() {
         if (this.element && this.selected) {
             // Add class
-            this.element.classList.add('selected');
+            this.element.classList.add(this.selectedClass);
             // Send generic block selected event
             dispatch(EVENTS.BLOCK_SELECTED, {block: this});
         }
         if (this.element && !this.selected) {
-            this.element.classList.remove('selected');
+            this.element.classList.remove(this.selectedClass);
         }
     }
 
@@ -222,6 +226,7 @@ export class GridBlock extends Block {
 export class ScoreBlock extends Block {
     static TYPE_COLUMN_SCORE = 'column-score';
     static TYPE_COLOR_SCORE = 'color-score';
+    static TYPE_JOKER = 'joker';
 
     #DEFAULT_VALUE = 0;
 
@@ -442,5 +447,70 @@ export class ColumnScoreBlock extends ScoreBlock {
 export class ColorScoreBlock extends ScoreBlock {
     constructor({ letter, row, color, selected = false, element, value = 0 }) {
         super({ letter, row, color, selected, element, value, type: ScoreBlock.TYPE_COLOR_SCORE });
+    }
+}
+
+export class JokerScoreBlock extends ScoreBlock {
+    constructor({
+        joker,
+        row,
+        element
+    }) {
+        const letter = "X",
+            color = "green",
+            value = 0,
+            type = ScoreBlock.TYPE_JOKER,
+            selected = joker.selected || false;
+
+        super({letter, row, color, selected, element, value, type});
+    }
+
+    render() {
+        // Create the block, add event listeners
+        const tpl = `<span class="joker${this.selected ? ' used' : ''}" data-type="joker" data-row="${this.row}">!</span>`;;
+
+        this.element = tpl;
+
+        delegate('#app', `[data-type="joker"][data-row="${this.row}"]`, 'click', event => {
+            this.refresh();
+            this.onClick({event});
+        });
+
+        return tpl;
+    }
+
+    refresh() {
+        this.element = document.querySelector(`[data-type="joker"][data-row="${this.row}"]`);
+    }
+
+    get selectedClass() {
+        return 'used';
+    }
+
+    onClick({event}) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        this.selected = !this.selected;
+
+        //currentGame.updateJokerState(index, selected);
+        dispatch(EVENTS.JOKER_SELECTED, {joker: this});
+
+        // Grid.jokerHandler({joker:this, index, event});
+        //
+        // event.preventDefault();
+        // event.stopPropagation();
+        //
+        // // Update selected state
+        // this.selected = !this.selected;
+        //
+        // // Save new block state to game cache
+        // dispatch(EVENTS.UPDATE_GRID_BLOCK, {gridBlock: this});
+        //
+        // // Check if row is completed
+        // Grid.setColumnScoreState({letter: this.letter, shouldEmit: true});
+        //
+        // dispatch(EVENTS.SCORE_COLUMN_UPDATE);
+        // //Grid.coloredBlockHandler({block:this.element, event, currentGame: this.currentGame});
     }
 }

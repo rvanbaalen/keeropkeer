@@ -85,13 +85,6 @@ export class Engine {
 
     parseJokerColumn(state) {
         Layout.renderJokers({jokers: state.jokers});
-
-        // Joker events
-        forEachQuery('.joker', (joker, index) => {
-            joker.addEventListener('click', (event) => {
-                Grid.jokerHandler({joker, currentGame: this.currentGame, index, event});
-            }, false);
-        });
     }
 
     parseScoreColumns(state) {

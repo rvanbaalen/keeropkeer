@@ -512,15 +512,19 @@ class Block {
         }
     }
 
+    get selectedClass() {
+        return 'selected';
+    }
+
     onSelected() {
         if (this.element && this.selected) {
             // Add class
-            this.element.classList.add('selected');
+            this.element.classList.add(this.selectedClass);
             // Send generic block selected event
             dispatch(EVENTS.BLOCK_SELECTED, {block: this});
         }
         if (this.element && !this.selected) {
-            this.element.classList.remove('selected');
+            this.element.classList.remove(this.selectedClass);
         }
     }
 
@@ -658,6 +662,7 @@ class GridBlock extends Block {
 class ScoreBlock extends Block {
     static TYPE_COLUMN_SCORE = 'column-score';
     static TYPE_COLOR_SCORE = 'color-score';
+    static TYPE_JOKER = 'joker';
 
     #DEFAULT_VALUE = 0;
 
@@ -875,6 +880,70 @@ class ColumnScoreBlock extends ScoreBlock {
     }
 }
 
+class JokerScoreBlock extends ScoreBlock {
+    constructor({
+        joker,
+        row,
+        element
+    }) {
+        const letter = "X",
+            color = "green",
+            value = 0,
+            type = ScoreBlock.TYPE_JOKER,
+            selected = joker.selected || false;
+
+        super({letter, row, color, selected, element, value, type});
+    }
+
+    render() {
+        // Create the block, add event listeners
+        const tpl = `<span class="joker${this.selected ? ' used' : ''}" data-type="joker" data-row="${this.row}">!</span>`;
+        this.element = tpl;
+
+        delegate('#app', `[data-type="joker"][data-row="${this.row}"]`, 'click', event => {
+            this.refresh();
+            this.onClick({event});
+        });
+
+        return tpl;
+    }
+
+    refresh() {
+        this.element = document.querySelector(`[data-type="joker"][data-row="${this.row}"]`);
+    }
+
+    get selectedClass() {
+        return 'used';
+    }
+
+    onClick({event}) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        this.selected = !this.selected;
+
+        //currentGame.updateJokerState(index, selected);
+        dispatch(EVENTS.JOKER_SELECTED, {joker: this});
+
+        // Grid.jokerHandler({joker:this, index, event});
+        //
+        // event.preventDefault();
+        // event.stopPropagation();
+        //
+        // // Update selected state
+        // this.selected = !this.selected;
+        //
+        // // Save new block state to game cache
+        // dispatch(EVENTS.UPDATE_GRID_BLOCK, {gridBlock: this});
+        //
+        // // Check if row is completed
+        // Grid.setColumnScoreState({letter: this.letter, shouldEmit: true});
+        //
+        // dispatch(EVENTS.SCORE_COLUMN_UPDATE);
+        // //Grid.coloredBlockHandler({block:this.element, event, currentGame: this.currentGame});
+    }
+}
+
 class Grid {
     static setColumnScoreState({letter, shouldEmit = false})  {
         if (Grid.isColumnComplete({letter})) {
@@ -913,12 +982,7 @@ class Grid {
     }
 
     static jokerHandler({joker, currentGame, index, event}) {
-        event.preventDefault();
-        event.stopPropagation();
 
-        let selected = !joker.classList.contains('used');
-        currentGame.updateJokerState(index, selected);
-        dispatch(EVENTS.JOKER_SELECTED, {joker, selected});
     }
 
     static isColumnComplete({letter, parent = document}) {
@@ -1034,12 +1098,9 @@ class Layout {
     static renderPlayerAvatar({url, playerName}) {
         return `<img src="${url}" alt="${playerName}"/><span>${playerName}</span>`;
     }
-    static renderJoker({joker}) {
-        return `<span class="joker${joker.selected ? ' used' : ''}">!</span>`;
-    }
     static renderJokers({jokers}) {
         $('jokerContainer').innerHTML = jokers
-            .map(joker => Layout.renderJoker({joker}))
+            .map((joker, index) => new JokerScoreBlock({joker, row: index}).render())
             .join('');
     }
     static renderGrid({columns}) {
@@ -3793,6 +3854,10 @@ class Game {
             const {gridBlock} = event.detail;
             this.updateBlockState({gridBlock});
         });
+        listen(EVENTS.JOKER_SELECTED, (event) => {
+            const {joker} = event.detail;
+            this.updateJokerState({joker});
+        });
     }
 
     initialize() {
@@ -3918,19 +3983,22 @@ class Game {
         }
     }
 
-    updateJokerState(row, selected) {
+    /**
+     *
+     * @param {JokerScoreBlock} joker
+     */
+    updateJokerState({joker}) {
         let currentState = this.state;
         let found = false;
-        currentState.jokers.forEach((joker, index) => {
-            if (index === row) {
-                joker.selected = selected;
+        currentState.jokers.forEach((stateJoker, index) => {
+            if (index === joker.row) {
+                stateJoker.selected = joker.selected;
                 found = true;
             }
         });
 
         if (found) {
             this.state = currentState;
-            dispatch(EVENTS.RENDER_LEVEL);
         }
     }
 
@@ -4024,13 +4092,6 @@ class Engine {
 
     parseJokerColumn(state) {
         Layout.renderJokers({jokers: state.jokers});
-
-        // Joker events
-        forEachQuery('.joker', (joker, index) => {
-            joker.addEventListener('click', (event) => {
-                Grid.jokerHandler({joker, currentGame: this.currentGame, index, event});
-            }, false);
-        });
     }
 
     parseScoreColumns(state) {

@@ -40,12 +40,7 @@ export class Grid {
     }
 
     static jokerHandler({joker, currentGame, index, event}) {
-        event.preventDefault();
-        event.stopPropagation();
 
-        let selected = !joker.classList.contains('used');
-        currentGame.updateJokerState(index, selected);
-        dispatch(EVENTS.JOKER_SELECTED, {joker, selected});
     }
 
     static isColumnComplete({letter, parent = document}) {

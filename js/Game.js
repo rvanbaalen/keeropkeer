@@ -46,6 +46,10 @@ export class Game {
             const {gridBlock} = event.detail;
             this.updateBlockState({gridBlock});
         });
+        listen(EVENTS.JOKER_SELECTED, (event) => {
+            const {joker} = event.detail;
+            this.updateJokerState({joker});
+        });
     }
 
     initialize() {
@@ -171,19 +175,22 @@ export class Game {
         }
     }
 
-    updateJokerState(row, selected) {
+    /**
+     *
+     * @param {JokerScoreBlock} joker
+     */
+    updateJokerState({joker}) {
         let currentState = this.state;
         let found = false;
-        currentState.jokers.forEach((joker, index) => {
-            if (index === row) {
-                joker.selected = selected;
+        currentState.jokers.forEach((stateJoker, index) => {
+            if (index === joker.row) {
+                stateJoker.selected = joker.selected;
                 found = true;
             }
         });
 
         if (found) {
             this.state = currentState;
-            dispatch(EVENTS.RENDER_LEVEL);
         }
     }
 
