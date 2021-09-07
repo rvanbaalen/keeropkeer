@@ -108,13 +108,12 @@ export class Engine {
             return '';
         }
 
-        console.log(state.colorScores.high);
         $('scoreColumn1').innerHTML = state.colorScores.high.map(colorScore => {
-            return `<span class="score-block final-score ${colorScore.color}${valueClass(colorScore.value)}" data-color="${colorScore.color}" data-type="colorScore" data-va><span>${colorScore.value}</span></span>`;
+            return `<span class="score-block final-score ${colorScore.color}${valueClass(5)}" data-color="${colorScore.color}" data-type="colorScore" data-value="5"><span>5</span></span>`;
         }).join('');
 
         $('scoreColumn2').innerHTML = state.colorScores.low.map(colorScore => {
-            return `<span class="score-block final-score ${colorScore.color}${valueClass(colorScore.value)}"><span>3</span></span>`;
+            return `<span class="score-block final-score ${colorScore.color}${valueClass(3)}" data-color="${colorScore.color}" data-type="colorScore" data-value="3"><span>3</span></span>`;
         }).join('');
 
 

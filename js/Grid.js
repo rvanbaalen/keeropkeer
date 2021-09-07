@@ -4,6 +4,14 @@ import {ColumnScoreBlock} from "./ScoreBlock";
 import socket from "./socket";
 
 export class Grid {
+    static setColumnScoreState({letter, shouldEmit = false})  {
+        if (Grid.isColumnComplete({letter})) {
+            Grid.toggleCompletedColumn({letter, shouldEmit})
+        } else {
+            // Column is not complete
+            Grid.clearColumnScore({letter, shouldEmit});
+        }
+    }
     static toggleCompletedColumn({letter, shouldEmit = false}) {
         let activateBlock = ColumnScoreBlock
             .getAll({letter})
@@ -44,12 +52,7 @@ export class Grid {
 
         const {letter} = gridBlock;
         // Check if row is completed
-        if (Grid.isColumnComplete({letter})) {
-            Grid.toggleCompletedColumn({letter, shouldEmit: true})
-        } else {
-            // Column is not complete
-            Grid.clearColumnScore({letter, shouldEmit: true});
-        }
+        Grid.setColumnScoreState({letter, shouldEmit: true});
 
         dispatch(EVENTS.SCORE_COLUMN_UPDATE);
     }

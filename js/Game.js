@@ -42,9 +42,6 @@ export class Game {
             // ahead and render the game
             this.continue();
         });
-        listen(EVENTS.SCORE_TOGGLE_COLUMN, ({element, row, column}) => {
-            this.updateState(column, row, 'state', Score.getColumnScoreState(element), 'score');
-        });
     }
 
     initialize() {
@@ -108,24 +105,11 @@ export class Game {
         let state = {
             grid: this.Level.getGrid(),
             jokers: [],
-            colorScores: {
-                high: [],
-                low: []
-            }
+            colorScores: {}
         }, i;
         for (i = 0; i < Game.TOTAL_JOKERS; i++) {
             state.jokers.push({selected: false});
         }
-        Game.COLORS.forEach(color => {
-            state.colorScores.high.push({
-                color: color,
-                value: 0
-            });
-            state.colorScores.low.push({
-                color: color,
-                value: 0
-            });
-        });
 
         return state;
     }

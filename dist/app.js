@@ -143,7 +143,6 @@ const EVENTS = {
     RENDER_TOTAL_SCORE: 'render-total-score',
     RENDER_LEVEL: 'render-level',
     LOADING: 'loading',
-    SCORE_TOGGLE_COLUMN: 'score-toggle-column',
     NAVIGATE_FROM: 'navigate-from',
     NAVIGATE_TO: 'navigate-to',
     NAVIGATE: 'navigate',
@@ -712,10 +711,37 @@ class ColumnScoreBlock extends ScoreBlock {
         TAKEN: 'taken'
     };
 
-    constructor({state = ColumnScoreBlock.STATE.DEFAULT, letter, row, color = 'white', selected = false, element, value = 0, claimedBy = [] }) {
+    cache;
+
+    constructor({state = ColumnScoreBlock.STATE.DEFAULT, letter, row = -1, color = 'white', selected = false, element, value = 0, claimedBy = [] }) {
         super({ letter, row, color, selected, element, value, type: ScoreBlock.TYPE_COLUMN_SCORE, claimedBy });
+        if (!letter || row === -1) {
+            throw new Error('Need letter and row for new block instance.');
+        }
+
+        // Try to load a cached state.
+        let cachedState = this.storage[letter + row];
+        state = (cachedState !== ColumnScoreBlock.STATE.DEFAULT) ? cachedState : state;
+
         this.blockState = state;
     }
+
+    set storage(value) {
+        GameStorage.setItem('columnScore', value);
+        this.cache = value;
+
+        console.log('Set storage', this.cache);
+    }
+
+    get storage() {
+        if (!this.cache) {
+            this.cache = GameStorage.getItem('columnScore', {});
+        }
+
+        console.log('Get from cache', this.cache);
+        return this.cache;
+    }
+
 
     set blockState(value) {
         value = (Object.values(ColumnScoreBlock.STATE).indexOf(value) === -1) ? ColumnScoreBlock.STATE.DEFAULT : value;
@@ -725,6 +751,11 @@ class ColumnScoreBlock extends ScoreBlock {
             Object.values(ColumnScoreBlock.STATE).forEach(className => this.element.classList.remove(className));
             this.element.classList.add(value);
         }
+
+        // Save state.
+        let storage = this.storage;
+        storage[this.letter + this.row] = value;
+        this.storage = storage;
     }
 
     get blockState() {
@@ -825,8 +856,7 @@ class ColumnScoreBlock extends ScoreBlock {
         if (element.length > 1) element = element[0];
 
         const {letter, row, color} = element.dataset;
-        const state = ColumnScoreBlock.getStateFromClassList(element);
-        return new ColumnScoreBlock({state, letter, row, color, element});
+        return new ColumnScoreBlock({letter, row, color, element});
     }
 
     static getElementByProperties({letter, row = 0}) {
@@ -852,6 +882,14 @@ class ColumnScoreBlock extends ScoreBlock {
 }
 
 class Grid {
+    static setColumnScoreState({letter, shouldEmit = false})  {
+        if (Grid.isColumnComplete({letter})) {
+            Grid.toggleCompletedColumn({letter, shouldEmit});
+        } else {
+            // Column is not complete
+            Grid.clearColumnScore({letter, shouldEmit});
+        }
+    }
     static toggleCompletedColumn({letter, shouldEmit = false}) {
         let activateBlock = ColumnScoreBlock
             .getAll({letter})
@@ -892,12 +930,7 @@ class Grid {
 
         const {letter} = gridBlock;
         // Check if row is completed
-        if (Grid.isColumnComplete({letter})) {
-            Grid.toggleCompletedColumn({letter, shouldEmit: true});
-        } else {
-            // Column is not complete
-            Grid.clearColumnScore({letter, shouldEmit: true});
-        }
+        Grid.setColumnScoreState({letter, shouldEmit: true});
 
         dispatch(EVENTS.SCORE_COLUMN_UPDATE);
     }
@@ -1037,7 +1070,7 @@ class Layout {
         blockGrid.innerHTML = '';
         columns.forEach(column => {
             blockGrid.append(Layout.renderGridColumn({column}));
-            if (Grid.isColumnComplete({letter: column.column})) ;
+            Grid.setColumnScoreState({letter: column.column, shouldEmit: false});
         });
     }
     static renderGridColumn({column}) {
@@ -3425,20 +3458,6 @@ class Score {
         }
     }
 
-    static getColumnScoreState(element) {
-        if (!element) {
-            return "default";
-        }
-
-        if (!element.classList.contains('active') && !element.classList.contains('taken')) {
-            return 'active';
-        } else if (element.classList.contains('active') && !element.classList.contains('taken')) {
-            return 'taken';
-        }
-
-        return 'default';
-    }
-
     get total() {
         return this.bonusScore + this.columnScore + this.jokerScore + this.starScore;
     }
@@ -3793,9 +3812,6 @@ class Game {
             // ahead and render the game
             this.continue();
         });
-        listen(EVENTS.SCORE_TOGGLE_COLUMN, ({element, row, column}) => {
-            this.updateState(column, row, 'state', Score.getColumnScoreState(element), 'score');
-        });
     }
 
     initialize() {
@@ -3859,24 +3875,11 @@ class Game {
         let state = {
             grid: this.Level.getGrid(),
             jokers: [],
-            colorScores: {
-                high: [],
-                low: []
-            }
+            colorScores: {}
         }, i;
         for (i = 0; i < Game.TOTAL_JOKERS; i++) {
             state.jokers.push({selected: false});
         }
-        Game.COLORS.forEach(color => {
-            state.colorScores.high.push({
-                color: color,
-                value: 0
-            });
-            state.colorScores.low.push({
-                color: color,
-                value: 0
-            });
-        });
 
         return state;
     }
@@ -4063,13 +4066,12 @@ class Engine {
             return '';
         };
 
-        console.log(state.colorScores.high);
         $('scoreColumn1').innerHTML = state.colorScores.high.map(colorScore => {
-            return `<span class="score-block final-score ${colorScore.color}${valueClass(colorScore.value)}" data-color="${colorScore.color}" data-type="colorScore" data-va><span>${colorScore.value}</span></span>`;
+            return `<span class="score-block final-score ${colorScore.color}${valueClass(5)}" data-color="${colorScore.color}" data-type="colorScore" data-value="5"><span>5</span></span>`;
         }).join('');
 
         $('scoreColumn2').innerHTML = state.colorScores.low.map(colorScore => {
-            return `<span class="score-block final-score ${colorScore.color}${valueClass(colorScore.value)}"><span>3</span></span>`;
+            return `<span class="score-block final-score ${colorScore.color}${valueClass(3)}" data-color="${colorScore.color}" data-type="colorScore" data-value="3"><span>3</span></span>`;
         }).join('');
 
 

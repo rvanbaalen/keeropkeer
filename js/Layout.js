@@ -122,9 +122,7 @@ export class Layout {
         blockGrid.innerHTML = '';
         columns.forEach(column => {
             blockGrid.append(Layout.renderGridColumn({column}));
-            if (Grid.isColumnComplete({letter: column.column})) {
-
-            }
+            Grid.setColumnScoreState({letter: column.column, shouldEmit: false});
         });
     }
     static renderGridColumn({column}) {

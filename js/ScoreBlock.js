@@ -1,5 +1,7 @@
 import {Block} from "./Block";
 import delegate from "delegate-it";
+import {GameStorage} from "./GameStorage";
+import socket from "./socket";
 
 export class ScoreBlock extends Block {
     static TYPE_COLUMN_SCORE = 'column-score';
@@ -76,10 +78,37 @@ export class ColumnScoreBlock extends ScoreBlock {
         TAKEN: 'taken'
     };
 
-    constructor({state = ColumnScoreBlock.STATE.DEFAULT, letter, row, color = 'white', selected = false, element, value = 0, claimedBy = [] }) {
+    cache;
+
+    constructor({state = ColumnScoreBlock.STATE.DEFAULT, letter, row = -1, color = 'white', selected = false, element, value = 0, claimedBy = [] }) {
         super({ letter, row, color, selected, element, value, type: ScoreBlock.TYPE_COLUMN_SCORE, claimedBy });
+        if (!letter || row === -1) {
+            throw new Error('Need letter and row for new block instance.');
+        }
+
+        // Try to load a cached state.
+        let cachedState = this.storage[letter + row];
+        state = (cachedState !== ColumnScoreBlock.STATE.DEFAULT) ? cachedState : state;
+
         this.blockState = state;
     }
+
+    set storage(value) {
+        GameStorage.setItem('columnScore', value);
+        this.cache = value;
+
+        console.log('Set storage', this.cache);
+    }
+
+    get storage() {
+        if (!this.cache) {
+            this.cache = GameStorage.getItem('columnScore', {});
+        }
+
+        console.log('Get from cache', this.cache);
+        return this.cache;
+    }
+
 
     set blockState(value) {
         value = (Object.values(ColumnScoreBlock.STATE).indexOf(value) === -1) ? ColumnScoreBlock.STATE.DEFAULT : value;
@@ -89,6 +118,11 @@ export class ColumnScoreBlock extends ScoreBlock {
             Object.values(ColumnScoreBlock.STATE).forEach(className => this.element.classList.remove(className));
             this.element.classList.add(value);
         }
+
+        // Save state.
+        let storage = this.storage;
+        storage[this.letter + this.row] = value;
+        this.storage = storage;
     }
 
     get blockState() {
@@ -189,8 +223,7 @@ export class ColumnScoreBlock extends ScoreBlock {
         if (element.length > 1) element = element[0];
 
         const {letter, row, color} = element.dataset;
-        const state = ColumnScoreBlock.getStateFromClassList(element);
-        return new ColumnScoreBlock({state, letter, row, color, element});
+        return new ColumnScoreBlock({letter, row, color, element});
     }
 
     static getElementByProperties({letter, row = 0}) {

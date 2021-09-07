@@ -67,20 +67,6 @@ export class Score {
         }
     }
 
-    static getColumnScoreState(element) {
-        if (!element) {
-            return "default";
-        }
-
-        if (!element.classList.contains('active') && !element.classList.contains('taken')) {
-            return 'active';
-        } else if (element.classList.contains('active') && !element.classList.contains('taken')) {
-            return 'taken';
-        }
-
-        return 'default';
-    }
-
     get total() {
         return this.bonusScore + this.columnScore + this.jokerScore + this.starScore;
     }
