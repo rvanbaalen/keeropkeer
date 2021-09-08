@@ -38,49 +38,6 @@ function R(tpl) {
     return tmp.firstElementChild;
 }
 
-function createElement(el, options = {}, appendTo = undefined){
-    let element = document.createElement(el);
-    Object.keys(options).forEach(function (k){
-        element[k] = options[k];
-    });
-    if (appendTo) {
-        appendTo.append(element);
-    }
-
-    return element;
-}
-
-function renderTemplate(template) {
-    let container = createElement('div');
-    container.innerHTML = template;
-
-    return container.firstElementChild;
-}
-
-function renderButton(options = {}) {
-    const defaultOptions = {
-        callback() {
-            return false;
-        },
-        className: 'button'
-    };
-    const opts = {...defaultOptions, ...options};
-    const buttonTemplate = `<a>${opts.label}</a>`;
-
-    let button = renderTemplate(buttonTemplate);
-    if (opts.callback && typeof opts.callback === 'function') {
-        button.addEventListener('click', opts.callback, false);
-    }
-    if (opts.className) {
-        button.className = opts.className;
-    }
-    if (opts.id) {
-        button.id = opts.id;
-    }
-
-    return button;
-}
-
 var nl = {
     modal: {
         newGame: {
@@ -134,22 +91,15 @@ const EVENTS = {
     GAME_CREATE_STATE: 'game-create-state',
     SCORE_RELOAD: 'score-reload',
     SCORE_TOTAL_TOGGLE: 'score-total-toggle',
-    MODAL_TOGGLE: 'modal-toggle',
     MODAL_HIDE: 'modal-hide',
     MODAL_SHOW: 'modal-show',
-    GRID_RENDER_COMPLETE: 'grid-render-complete',
     JOKER_SELECTED: 'joker-selected',
     STAR_SELECTED: 'star-selected',
-    RENDER_TOTAL_SCORE: 'render-total-score',
     RENDER_LEVEL: 'render-level',
-    LOADING: 'loading',
-    NAVIGATE_FROM: 'navigate-from',
-    NAVIGATE_TO: 'navigate-to',
     NAVIGATE: 'navigate',
     NAVIGATE_BACK: 'navigate-back',
-    SCORE_COLUMN_CLAIM: 'score-column-claim',
     SCORE_COLUMN_UPDATE: 'score-column-update',
-    BLOCK_SELECTED: 'block-selected',
+    SCORE_COLOR_UPDATE: 'score-color-update',
     UPDATE_GRID_BLOCK: 'update-grid-block'
 };
 
@@ -162,13 +112,18 @@ function listen(eventName, callback, once = false) {
     app.addEventListener(eventName, callback, false);
 }
 
+const SOCKET_SERVER = 'http://0.0.0.0:3000/';
+
+const io = window.io;
+const socket = io(SOCKET_SERVER, { autoConnect: false });
+
+socket.onAny((event, ...args) => {
+    console.log(event, args);
+});
+
+console.log('Setup socket server ', SOCKET_SERVER);
+
 function registerModalEvents() {
-    listen(EVENTS.MODAL_TOGGLE, event => {
-        const {modalId} = event.detail;
-        if ($(modalId)) {
-            $(modalId).classList.toggle('show');
-        }
-    });
     listen(EVENTS.MODAL_HIDE, event => {
         const {modalId} = event.detail, element = $(modalId);
         if (element && element.classList.contains('show')) {
@@ -188,7 +143,7 @@ function registerModalEvents() {
 }
 
 class Modals {
-    static newGame({modalId}) {
+    static newGame({modalId = 'newGameModal', message, emit = false} = {}) {
         if (!modalId) {
             modalId = `modal_${randomString(8)}`;
         }
@@ -197,7 +152,7 @@ class Modals {
             id: modalId,
             visible: true,
             selfDestruct: true,
-            message: language.modal.newGame.body,
+            message: message || language.modal.newGame.body,
             buttons: {
                 cancel: {
                     id: modalId + 'Cancel',
@@ -218,50 +173,16 @@ class Modals {
                         dispatch(EVENTS.MODAL_HIDE, {modalId});
                         // Reset the game
                         dispatch(EVENTS.GAME_NEW);
+                        if (emit) socket.emit('game:new');
                     }
                 }
             }
         });
     }
-
-    static claimColumn({modalId, message, data}) {
-        if (!modalId) {
-            modalId = `modal_${randomString(8)}`;
-        }
-
-        return createNewModal({
-            id: modalId,
-            visible: true,
-            selfDestruct: true,
-            message: message,
-            buttons: {
-                cancel: {
-                    id: modalId + 'Cancel',
-                    label: 'Dont claim',
-                    callback(event) {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        dispatch(EVENTS.SCORE_COLUMN_CLAIM, {player: data.player, column: data.columnLetter});
-                        dispatch(EVENTS.MODAL_HIDE, {modalId});
-                    }
-                },
-                ok: {
-                    id: modalId + 'Confirm',
-                    label: 'Claim',
-                    callback(event) {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        // hide the modal first
-                        dispatch(EVENTS.MODAL_HIDE, {modalId});
-                        // Reset the game
-                        dispatch(EVENTS.SCORE_COLUMN_CLAIM, {player: data.player, column: data.columnLetter});
-                    }
-                }
-            }
-        });
+    static showNewGameModal({modalId = 'newGameModal', message, emit = false} = {}) {
+        Modals.newGame({modalId, message, emit});
+        dispatch(EVENTS.MODAL_SHOW, {modalId});
     }
-
-
 }
 
 
@@ -311,7 +232,7 @@ function createNewModal(options) {
         </div>
     `;
 
-    let modal = renderTemplate(modalTemplate);
+    let modal = R(modalTemplate);
     if (opts.buttons.cancel && typeof opts.buttons.cancel.callback === 'function') {
         modal.querySelector('#' + opts.buttons.cancel.id).addEventListener('click', opts.buttons.cancel.callback, false);
     }
@@ -323,17 +244,6 @@ function createNewModal(options) {
 
     return modal;
 }
-
-const SOCKET_SERVER = 'https://dry-peak-80209.herokuapp.com/' ;
-
-const io = window.io;
-const socket = io(SOCKET_SERVER, { autoConnect: false });
-
-socket.onAny((event, ...args) => {
-    console.log(event, args);
-});
-
-console.log('Setup socket server ', SOCKET_SERVER);
 
 class GameStorage {
     static prefix = 'kok_';
@@ -520,8 +430,6 @@ class Block {
         if (this.element && this.selected) {
             // Add class
             this.element.classList.add(this.selectedClass);
-            // Send generic block selected event
-            dispatch(EVENTS.BLOCK_SELECTED, {block: this});
         }
         if (this.element && !this.selected) {
             this.element.classList.remove(this.selectedClass);
@@ -625,7 +533,11 @@ class GridBlock extends Block {
         // Check if row is completed
         Grid.setColumnScoreState({letter: this.letter, shouldEmit: true});
 
+        // Check if color is completed
+        Grid.setColorScoreState({color: this.color, shouldEmit: true});
+
         dispatch(EVENTS.SCORE_COLUMN_UPDATE);
+        dispatch(EVENTS.SCORE_COLOR_UPDATE);
         //Grid.coloredBlockHandler({block:this.element, event, currentGame: this.currentGame});
     }
 
@@ -720,8 +632,8 @@ class ColumnScoreBlock extends ScoreBlock {
 
     cache;
 
-    constructor({state = ColumnScoreBlock.STATE.DEFAULT, letter, row = -1, color = 'white', selected = false, element, value = 0 }) {
-        super({ letter, row, color, selected, element, value, type: ScoreBlock.TYPE_COLUMN_SCORE });
+    constructor({state = ColumnScoreBlock.STATE.DEFAULT, letter, row = -1, color = 'white', selected = false, element, value = 0, type = ScoreBlock.TYPE_COLUMN_SCORE }) {
+        super({ letter, row, color, selected, element, value, type });
         if (!letter || row === -1) {
             throw new Error('Need letter and row for new block instance.');
         }
@@ -733,6 +645,10 @@ class ColumnScoreBlock extends ScoreBlock {
         this.blockState = state;
     }
 
+    get blockStateKey() {
+        return this.letter + this.row;
+    }
+
     set storage(value) {
         GameStorage.setItem('columnScore', value);
         this.cache = value;
@@ -740,6 +656,10 @@ class ColumnScoreBlock extends ScoreBlock {
 
     get storage() {
         return (!this.cache) ? GameStorage.getItem('columnScore', {}) : this.cache;
+    }
+
+    static clearStorage() {
+        GameStorage.removeItem('columnScore');
     }
 
     set blockState(value) {
@@ -753,7 +673,7 @@ class ColumnScoreBlock extends ScoreBlock {
 
         // Save state.
         let storage = this.storage;
-        storage[this.letter + this.row] = value;
+        storage[this.blockStateKey] = value;
         this.storage = storage;
     }
 
@@ -765,7 +685,7 @@ class ColumnScoreBlock extends ScoreBlock {
     render() {
         const tpl = `
             <span 
-                class="rounded-block column-score${this.blockState !== ColumnScoreBlock.STATE.DEFAULT ? ' ' + this.blockState : ''}" 
+                class="rounded-block column-score" 
                 data-letter="${this.letter}" 
                 data-row="${this.row}"
                 data-type="${this.type}">
@@ -782,9 +702,6 @@ class ColumnScoreBlock extends ScoreBlock {
     }
 
     toggleState() {
-        const {letter, type, row} = this;
-        this.element = ColumnScoreBlock.getElementByProperties({letter, type, row});
-
         switch (this.blockState) {
             case ColumnScoreBlock.STATE.DEFAULT:
                 // Toggle selected
@@ -880,6 +797,98 @@ class ColumnScoreBlock extends ScoreBlock {
     }
 }
 
+class ColorScoreBlock extends ColumnScoreBlock {
+    constructor({state = ColumnScoreBlock.STATE.DEFAULT, color = 'white', element, value = 0 }) {
+        const letter = color, row = parseInt(value), selected = false;
+        super({ letter, row, color, selected, element, value: parseInt(value), type: ScoreBlock.TYPE_COLOR_SCORE, state });
+        if (!color || value < 0) {
+            throw new Error('Need color and value for new ColorScoreBlock instance.');
+        }
+    }
+
+    render() {
+        const tpl = `<span class="score-block final-score${this.blockState !== ColumnScoreBlock.STATE.DEFAULT ? ' ' + this.blockState : ''}" data-color="${this.color}" data-type="${this.type}" data-value="${this.value}"><span>${this.value}</span></span>`;
+        this.element = tpl;
+
+        delegate('#app', `[data-type="${this.type}"][data-color="${this.color}"][data-value="${this.value}"]`, 'click', event => {
+            this.onClick({event});
+        });
+
+        return tpl;
+    }
+
+    refresh() {
+        this.element = ColorScoreBlock.getElementByProperties({color: this.color, value: this.value});
+        this.state.blockState = ColorScoreBlock.getStateFromClassList(this.element);
+    }
+
+    isHighScore() {
+        return this.value === 5;
+    }
+
+    toggleState() {
+        const state = this.blockState;
+        if (state === ColorScoreBlock.STATE.DEFAULT) {
+            this.active();
+            return;
+        }
+
+        if (state === ColorScoreBlock.STATE.ACTIVE) {
+            this.taken();
+            return;
+        }
+
+        if (state === ColorScoreBlock.STATE.TAKEN) {
+            this.default();
+            return;
+        }
+
+        this.default();
+    }
+
+    static getInstance(element) {
+        if (typeof element === 'string') element = document.querySelector(element);
+        if (element.length > 1) element = element[0];
+
+        const {value, color} = element.dataset;
+        return new ColorScoreBlock({color, value, element});
+    }
+
+    static getElementByProperties({color, value = 0}) {
+        return document.querySelector(`[data-type="${ScoreBlock.TYPE_COLOR_SCORE}"][data-color="${color}"][data-value="${value}"]`);
+    }
+
+    static getAll({color, value = 5}) {
+        return [...document.querySelectorAll(`[data-type="${ScoreBlock.TYPE_COLOR_SCORE}"][data-value="${value}"][data-color="${color}"]`)].map(el => ColorScoreBlock.getInstance(el));
+    }
+
+    /**
+     * @param letter
+     * @returns {ColumnScoreBlock}
+     */
+    static getFirstAvailable({color}) {
+        console.log('getting ' + `[data-type="${ScoreBlock.TYPE_COLOR_SCORE}"][data-color="${color}"]:not(.${ColorScoreBlock.STATE.ACTIVE}):not(.${ColorScoreBlock.STATE.TAKEN})`);
+        const element = document.querySelector(`[data-type="${ScoreBlock.TYPE_COLOR_SCORE}"][data-color="${color}"]:not(.${ColorScoreBlock.STATE.ACTIVE}):not(.${ColorScoreBlock.STATE.TAKEN})`);
+        if (element) {
+            return ColorScoreBlock.getInstance(element);
+        }
+
+        return false;
+    }
+
+    set storage(value) {
+        GameStorage.setItem('colorScore', value);
+    }
+
+    get storage() {
+        return GameStorage.getItem('colorScore', {});
+    }
+
+    static clearStorage() {
+        GameStorage.removeItem('colorScore');
+    }
+}
+
 class JokerScoreBlock extends ScoreBlock {
     constructor({
         joker,
@@ -922,25 +931,7 @@ class JokerScoreBlock extends ScoreBlock {
 
         this.selected = !this.selected;
 
-        //currentGame.updateJokerState(index, selected);
         dispatch(EVENTS.JOKER_SELECTED, {joker: this});
-
-        // Grid.jokerHandler({joker:this, index, event});
-        //
-        // event.preventDefault();
-        // event.stopPropagation();
-        //
-        // // Update selected state
-        // this.selected = !this.selected;
-        //
-        // // Save new block state to game cache
-        // dispatch(EVENTS.UPDATE_GRID_BLOCK, {gridBlock: this});
-        //
-        // // Check if row is completed
-        // Grid.setColumnScoreState({letter: this.letter, shouldEmit: true});
-        //
-        // dispatch(EVENTS.SCORE_COLUMN_UPDATE);
-        // //Grid.coloredBlockHandler({block:this.element, event, currentGame: this.currentGame});
     }
 }
 
@@ -959,9 +950,8 @@ class Grid {
             .filter(block => block.isActive())
             .length === 0;
 
-        if (activateBlock) {
-            let block =
-                ColumnScoreBlock.getFirstAvailable({letter});
+        let block = ColumnScoreBlock.getFirstAvailable({letter});
+        if (activateBlock && block !== false) {
             block?.active();
 
             if (block.isHighScore() && shouldEmit) {
@@ -981,15 +971,52 @@ class Grid {
             });
     }
 
-    static jokerHandler({joker, currentGame, index, event}) {
-
-    }
-
-    static isColumnComplete({letter, parent = document}) {
-        const columnElement = parent.querySelectorAll(`[data-letter="${letter}"]`)[0]?.parentElement;
+    static isColumnComplete({letter}) {
+        const columnElement = document.querySelectorAll(`[data-letter="${letter}"]`)[0]?.parentElement;
         const selectedBlocks = columnElement.querySelectorAll('.score-block.selected').length;
 
         return selectedBlocks === 7;
+    }
+
+    static setColorScoreState({color, shouldEmit = false}) {
+        if (Grid.isColorComplete({color})) {
+            Grid.toggleCompletedColor({color, shouldEmit});
+        } else {
+            Grid.clearColorScore({color, shouldEmit});
+        }
+    }
+    static isColorComplete({color}) {
+        const coloredBlocks = document.querySelectorAll(`[data-color="${color}"][data-type="score-block"]`);
+        const selectedBlocks = document.querySelectorAll(`[data-color="${color}"][data-type="score-block"].selected`);
+
+        return coloredBlocks.length === selectedBlocks.length;
+    }
+    static toggleCompletedColor({color, shouldEmit = false}) {
+        let activateBlock = ColorScoreBlock
+            .getAll({color})
+            .filter(block => block.isActive())
+            .length === 0;
+
+        let block = ColorScoreBlock.getFirstAvailable({color});
+        if (activateBlock && block !== false) {
+            block?.active();
+
+            console.log(block.value, 5, block.value === 5);
+            if (block.isHighScore() && shouldEmit) {
+                socket.emit('grid:color-complete', {color});
+            }
+        }
+    }
+    static clearColorScore({color, shouldEmit = false}) {
+        ColorScoreBlock.getAll({color})
+            .forEach(block => {
+                if (block.isActive()) {
+                    block.default();
+                    if (block.isHighScore() && shouldEmit) {
+                        socket.emit('grid:color-clear', {color});
+                    }
+                }
+            });
     }
 }
 
@@ -1199,11 +1226,13 @@ class Lobby {
     }
 
     static removePlayerFromLobby(player) {
-        const playerElement = Lobby.getPlayerElement(player);
-        if (playerElement) {
-            // Player element exists in the DOM
-            playerElement.remove();
-        }
+        forEachQuery('#players, #activePlayers', playerContainer => {
+            const playerElement = Lobby.getPlayerElement(player);
+            if (playerElement) {
+                // Player element exists in the DOM
+                playerElement.remove();
+            }
+        });
     }
 
     static setPlayers(players) {
@@ -3462,8 +3491,11 @@ class Score {
 
             listen(EVENTS.SCORE_TOTAL_TOGGLE, () => this.toggleTotalScore());
 
-            listen(EVENTS.SCORE_COLUMN_UPDATE, letter => {
+            listen(EVENTS.SCORE_COLUMN_UPDATE, () => {
                 this.renderColumnScore(this.columnScore);
+            });
+            listen(EVENTS.SCORE_COLOR_UPDATE, () => {
+                this.renderBonusScore(this.bonusScore);
             });
         }
 
@@ -3476,6 +3508,18 @@ class Score {
         socket.on('grid:column-cleared', ({letter}) => {
             ColumnScoreBlock
                 .getAll({letter})
+                .filter(block => block.isTaken())
+                .forEach(block => block.default());
+        });
+        socket.on('grid:color-completed', ({color}) => {
+            ColorScoreBlock
+                .getAll({color})
+                .filter(block => block.isHighScore() && !block.active())
+                .forEach(block => block.taken());
+        });
+        socket.on('grid:color-cleared', ({color}) => {
+            ColorScoreBlock
+                .getAll({color})
                 .filter(block => block.isTaken())
                 .forEach(block => block.default());
         });
@@ -3525,7 +3569,7 @@ class Score {
     }
 
     get bonusScore() {
-        let bonuses = document.querySelectorAll('.final-selected span');
+        let bonuses = document.querySelectorAll('.final-score.active span');
         let bonusTotal = 0;
         Array.prototype.forEach.call(bonuses, (bonus) => {
             bonusTotal += parseInt(bonus.innerText);
@@ -3667,7 +3711,7 @@ class Notify {
             </div>
         `;
 
-        return renderTemplate(template);
+        return R(template);
     }
 }
 
@@ -3791,7 +3835,6 @@ class Router {
     hideCurrent() {
         if (this.currentView) {
             if (!this.silent) this.previousView = this.currentView;
-            dispatch(EVENTS.NAVIGATE_FROM, {page: this.currentView});
             this.currentView.classList.add('hidden');
         }
     }
@@ -3802,7 +3845,6 @@ class Router {
         this.hideCurrent();
         this.currentView = $(page);
         this.currentView.classList.remove('hidden');
-        dispatch(EVENTS.NAVIGATE_TO, {page: this.currentView});
         this.silent = false;
     }
 
@@ -3915,6 +3957,8 @@ class Game {
     resetState() {
         this.Level.reset();
         this.state = false;
+        GameStorage.removeItem('columnScore');
+        GameStorage.removeItem('colorScore');
     }
 
     createState() {
@@ -3946,22 +3990,6 @@ class Game {
             GameStorage.removeItem('state');
         } else {
             GameStorage.setItem('state', value);
-        }
-    }
-
-    updateState(column, index, key, value, type = 'grid') {
-        let currentState = this.state;
-        let found = false;
-        currentState.grid.forEach((stateColumn, stateIndex) => {
-            if (stateColumn.column === column) {
-                currentState.grid[stateIndex][type][index][key] = value;
-                found = true;
-            }
-        });
-
-        if (found) {
-            this.state = currentState;
-            dispatch(EVENTS.RENDER_LEVEL);
         }
     }
 
@@ -4001,22 +4029,6 @@ class Game {
             this.state = currentState;
         }
     }
-
-    updateColorScoreState(group, color, value) {
-        let found = false;
-        let currentState = this.state;
-        currentState.colorScores[group].forEach((colorScore) => {
-            if (colorScore.color === color) {
-                colorScore.value = value;
-                found = true;
-            }
-        });
-
-        if (found) {
-            this.state = currentState;
-            dispatch(EVENTS.RENDER_LEVEL);
-        }
-    }
 }
 
 class Engine {
@@ -4035,9 +4047,6 @@ class Engine {
 
         $('connecting-message').innerText = language.messages.connecting;
 
-        listen(EVENTS.LOADING, () => {
-            dispatch(EVENTS.MODAL_SHOW, {modalId: 'genericLoading'});
-        });
         listen(EVENTS.RENDER_LEVEL, () => {
             this.render();
         });
@@ -4059,17 +4068,21 @@ class Engine {
             // Clear player list. They'll reappear once they reconnect
             Lobby.setPlayers([]);
         });
+        socket.on('game:confirm-new', ({player}) => {
+            Modals.showNewGameModal({
+                message: `Speler ${player.username} start een nieuw spel. Wil jij ook opnieuw beginnen?`,
+                emit: false
+            });
+        });
 
         $('newGameButton').addEventListener('click', (event) => {
             event.preventDefault();
             event.stopPropagation();
 
-            const modalId = 'newGameModal';
-            Modals.newGame({modalId});
-
-            dispatch(EVENTS.MODAL_SHOW, {modalId: 'newGameModal'});
+            Modals.showNewGameModal({emit: true});
         }, false);
     }
+
 
     parseOrientationOverlay() {
         createNewModal({
@@ -4094,69 +4107,17 @@ class Engine {
         Layout.renderJokers({jokers: state.jokers});
     }
 
-    parseScoreColumns(state) {
-
-        $('scoreColumn1').innerHTML = state.colorScores.high.map(colorScore => {
-            return `<span class="score-block final-score ${colorScore.color}" data-color="${colorScore.color}" data-type="colorScore" data-value="5"><span>5</span></span>`;
+    parseScoreColumns() {
+        $('scoreColumn1').innerHTML = Game.COLORS.map(color => {
+            return new ColorScoreBlock({value: 5, color}).render();
         }).join('');
 
-        $('scoreColumn2').innerHTML = state.colorScores.low.map(colorScore => {
-            return `<span class="score-block final-score ${colorScore.color}" data-color="${colorScore.color}" data-type="colorScore" data-value="3"><span>3</span></span>`;
+        $('scoreColumn2').innerHTML = Game.COLORS.map(color => {
+            return new ColorScoreBlock({value: 3, color}).render();
         }).join('');
 
-
-        // Final score toggles
-        let getValueFromClass = function (element, high = 5, low = -1) {
-            if (!element.classList.contains('final-selected') && !element.classList.contains('selected')) {
-                // Not selected yet, value = 5
-                return high;
-            }
-            if (element.classList.contains('final-selected') && !element.classList.contains('selected')) {
-                // Already selected, toggle disabled state, value = -1
-                return low
-            }
-
-            return 0;
-        };
-        let getColorFromElement = function (element) {
-            let color = '';
-            Game.COLORS.forEach(mappedColor => {
-                if (element.classList.contains(mappedColor)) {
-                    color = mappedColor;
-                }
-            });
-
-            return color;
-        };
-        let highScores = document.querySelectorAll('#scoreColumn1 .final-score');
-        Array.prototype.forEach.call(highScores, (highScore) => {
-            highScore.addEventListener('click', (event) => {
-                event.preventDefault();
-                event.stopPropagation();
-
-                this.currentGame.updateColorScoreState(
-                    'high',
-                    getColorFromElement(highScore),
-                    getValueFromClass(highScore, 5, -1)
-                );
-
-                dispatch(EVENTS.SCORE_RELOAD);
-            }, false);
-        });
-        let lowScores = document.querySelectorAll('#scoreColumn2 .final-score');
-        Array.prototype.forEach.call(lowScores, (lowScore) => {
-            lowScore.addEventListener('click', (event) => {
-                event.preventDefault();
-                event.stopPropagation();
-
-                this.currentGame.updateColorScoreState(
-                    'low',
-                    getColorFromElement(lowScore),
-                    getValueFromClass(lowScore, 3, -1)
-                );
-
-                dispatch(EVENTS.SCORE_RELOAD);
-            }, false);
+        Game.COLORS.map(color => {
+            Grid.setColorScoreState({color});
         });
     }
 
@@ -4165,8 +4126,6 @@ class Engine {
         this.parseColumnGrid(state);
         this.parseJokerColumn(this.currentGame.state);
         this.parseScoreColumns(this.currentGame.state);
-
-        dispatch(EVENTS.GRID_RENDER_COMPLETE);
     }
 
     parseTotalScores() {
@@ -4196,33 +4155,11 @@ class Engine {
         }, false);
     }
 
-    renderNewGameButton(callback) {
-        const id = 'newGameButton';
-        if ($(id)) {
-            return;
-        }
-
-        const button = renderButton({
-            callback, id,
-            label: language.label.newGame,
-            className: 'new-game',
-        });
-
-        // New game button
-        $('gameView').append(button);
-
-        return button;
-    }
-
     render() {
         this.parseGrid();
         this.parseTotalScores();
 
         dispatch(EVENTS.SCORE_RELOAD);
-    }
-
-    parseColumn(column) {
-
     }
 }
 

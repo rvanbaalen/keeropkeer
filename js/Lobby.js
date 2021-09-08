@@ -60,11 +60,13 @@ export class Lobby {
     }
 
     static removePlayerFromLobby(player) {
-        const playerElement = Lobby.getPlayerElement(player);
-        if (playerElement) {
-            // Player element exists in the DOM
-            playerElement.remove();
-        }
+        forEachQuery('#players, #activePlayers', playerContainer => {
+            const playerElement = Lobby.getPlayerElement(player);
+            if (playerElement) {
+                // Player element exists in the DOM
+                playerElement.remove();
+            }
+        });
     }
 
     static setPlayers(players) {

@@ -1,7 +1,7 @@
 import {$} from "./utilities.js";
 import {EVENTS, listen} from "./events.js";
 import socket from "./socket";
-import {ColumnScoreBlock} from "./Block";
+import {ColorScoreBlock, ColumnScoreBlock} from "./Block";
 
 export class Score {
     static JOKER_VALUE = 1;
@@ -32,8 +32,11 @@ export class Score {
 
             listen(EVENTS.SCORE_TOTAL_TOGGLE, () => this.toggleTotalScore());
 
-            listen(EVENTS.SCORE_COLUMN_UPDATE, letter => {
+            listen(EVENTS.SCORE_COLUMN_UPDATE, () => {
                 this.renderColumnScore(this.columnScore);
+            });
+            listen(EVENTS.SCORE_COLOR_UPDATE, () => {
+                this.renderBonusScore(this.bonusScore);
             });
         }
 
@@ -46,6 +49,18 @@ export class Score {
         socket.on('grid:column-cleared', ({letter}) => {
             ColumnScoreBlock
                 .getAll({letter})
+                .filter(block => block.isTaken())
+                .forEach(block => block.default());
+        });
+        socket.on('grid:color-completed', ({color}) => {
+            ColorScoreBlock
+                .getAll({color})
+                .filter(block => block.isHighScore() && !block.active())
+                .forEach(block => block.taken());
+        });
+        socket.on('grid:color-cleared', ({color}) => {
+            ColorScoreBlock
+                .getAll({color})
                 .filter(block => block.isTaken())
                 .forEach(block => block.default());
         });
@@ -95,7 +110,7 @@ export class Score {
     }
 
     get bonusScore() {
-        let bonuses = document.querySelectorAll('.final-selected span');
+        let bonuses = document.querySelectorAll('.final-score.active span');
         let bonusTotal = 0;
         Array.prototype.forEach.call(bonuses, (bonus) => {
             bonusTotal += parseInt(bonus.innerText);
@@ -145,7 +160,6 @@ export class Score {
     renderTotalScore() {
         const el = $('totalScore');
         if (!el.classList.contains('hide')) {
-            console.log('set total', this.total);
             el.innerText = this.total;
         }
     }

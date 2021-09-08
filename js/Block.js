@@ -84,8 +84,6 @@ export class Block {
         if (this.element && this.selected) {
             // Add class
             this.element.classList.add(this.selectedClass);
-            // Send generic block selected event
-            dispatch(EVENTS.BLOCK_SELECTED, {block: this});
         }
         if (this.element && !this.selected) {
             this.element.classList.remove(this.selectedClass);
@@ -189,7 +187,11 @@ export class GridBlock extends Block {
         // Check if row is completed
         Grid.setColumnScoreState({letter: this.letter, shouldEmit: true});
 
+        // Check if color is completed
+        Grid.setColorScoreState({color: this.color, shouldEmit: true});
+
         dispatch(EVENTS.SCORE_COLUMN_UPDATE);
+        dispatch(EVENTS.SCORE_COLOR_UPDATE);
         //Grid.coloredBlockHandler({block:this.element, event, currentGame: this.currentGame});
     }
 
@@ -284,8 +286,8 @@ export class ColumnScoreBlock extends ScoreBlock {
 
     cache;
 
-    constructor({state = ColumnScoreBlock.STATE.DEFAULT, letter, row = -1, color = 'white', selected = false, element, value = 0 }) {
-        super({ letter, row, color, selected, element, value, type: ScoreBlock.TYPE_COLUMN_SCORE });
+    constructor({state = ColumnScoreBlock.STATE.DEFAULT, letter, row = -1, color = 'white', selected = false, element, value = 0, type = ScoreBlock.TYPE_COLUMN_SCORE }) {
+        super({ letter, row, color, selected, element, value, type });
         if (!letter || row === -1) {
             throw new Error('Need letter and row for new block instance.');
         }
@@ -297,6 +299,10 @@ export class ColumnScoreBlock extends ScoreBlock {
         this.blockState = state;
     }
 
+    get blockStateKey() {
+        return this.letter + this.row;
+    }
+
     set storage(value) {
         GameStorage.setItem('columnScore', value);
         this.cache = value;
@@ -304,6 +310,10 @@ export class ColumnScoreBlock extends ScoreBlock {
 
     get storage() {
         return (!this.cache) ? GameStorage.getItem('columnScore', {}) : this.cache;
+    }
+
+    static clearStorage() {
+        GameStorage.removeItem('columnScore');
     }
 
     set blockState(value) {
@@ -317,7 +327,7 @@ export class ColumnScoreBlock extends ScoreBlock {
 
         // Save state.
         let storage = this.storage;
-        storage[this.letter + this.row] = value;
+        storage[this.blockStateKey] = value;
         this.storage = storage;
     }
 
@@ -329,7 +339,7 @@ export class ColumnScoreBlock extends ScoreBlock {
     render() {
         const tpl = `
             <span 
-                class="rounded-block column-score${this.blockState !== ColumnScoreBlock.STATE.DEFAULT ? ' ' + this.blockState : ''}" 
+                class="rounded-block column-score" 
                 data-letter="${this.letter}" 
                 data-row="${this.row}"
                 data-type="${this.type}">
@@ -346,9 +356,6 @@ export class ColumnScoreBlock extends ScoreBlock {
     }
 
     toggleState() {
-        const {letter, type, row} = this;
-        this.element = ColumnScoreBlock.getElementByProperties({letter, type, row});
-
         switch (this.blockState) {
             case ColumnScoreBlock.STATE.DEFAULT:
                 // Toggle selected
@@ -444,9 +451,94 @@ export class ColumnScoreBlock extends ScoreBlock {
     }
 }
 
-export class ColorScoreBlock extends ScoreBlock {
-    constructor({ letter, row, color, selected = false, element, value = 0 }) {
-        super({ letter, row, color, selected, element, value, type: ScoreBlock.TYPE_COLOR_SCORE });
+export class ColorScoreBlock extends ColumnScoreBlock {
+    constructor({state = ColumnScoreBlock.STATE.DEFAULT, color = 'white', element, value = 0 }) {
+        const letter = color, row = parseInt(value), selected = false;
+        super({ letter, row, color, selected, element, value: parseInt(value), type: ScoreBlock.TYPE_COLOR_SCORE, state });
+        if (!color || value < 0) {
+            throw new Error('Need color and value for new ColorScoreBlock instance.');
+        }
+    }
+
+    render() {
+        const tpl = `<span class="score-block final-score${this.blockState !== ColumnScoreBlock.STATE.DEFAULT ? ' ' + this.blockState : ''}" data-color="${this.color}" data-type="${this.type}" data-value="${this.value}"><span>${this.value}</span></span>`;
+        this.element = tpl;
+
+        delegate('#app', `[data-type="${this.type}"][data-color="${this.color}"][data-value="${this.value}"]`, 'click', event => {
+            this.onClick({event});
+        });
+
+        return tpl;
+    }
+
+    refresh() {
+        this.element = ColorScoreBlock.getElementByProperties({color: this.color, value: this.value});
+        this.state.blockState = ColorScoreBlock.getStateFromClassList(this.element);
+    }
+
+    isHighScore() {
+        return this.value === 5;
+    }
+
+    toggleState() {
+        const state = this.blockState;
+        if (state === ColorScoreBlock.STATE.DEFAULT) {
+            this.active();
+            return;
+        }
+
+        if (state === ColorScoreBlock.STATE.ACTIVE) {
+            this.taken();
+            return;
+        }
+
+        if (state === ColorScoreBlock.STATE.TAKEN) {
+            this.default();
+            return;
+        }
+
+        this.default();
+    }
+
+    static getInstance(element) {
+        if (typeof element === 'string') element = document.querySelector(element);
+        if (element.length > 1) element = element[0];
+
+        const {value, color} = element.dataset;
+        return new ColorScoreBlock({color, value, element});
+    }
+
+    static getElementByProperties({color, value = 0}) {
+        return document.querySelector(`[data-type="${ScoreBlock.TYPE_COLOR_SCORE}"][data-color="${color}"][data-value="${value}"]`);
+    }
+
+    static getAll({color, value = 5}) {
+        return [...document.querySelectorAll(`[data-type="${ScoreBlock.TYPE_COLOR_SCORE}"][data-value="${value}"][data-color="${color}"]`)].map(el => ColorScoreBlock.getInstance(el));
+    }
+
+    /**
+     * @param letter
+     * @returns {ColumnScoreBlock}
+     */
+    static getFirstAvailable({color}) {
+        const element = document.querySelector(`[data-type="${ScoreBlock.TYPE_COLOR_SCORE}"][data-color="${color}"]:not(.${ColorScoreBlock.STATE.ACTIVE}):not(.${ColorScoreBlock.STATE.TAKEN})`);
+        if (element) {
+            return ColorScoreBlock.getInstance(element);
+        }
+
+        return false;
+    }
+
+    set storage(value) {
+        GameStorage.setItem('colorScore', value);
+    }
+
+    get storage() {
+        return GameStorage.getItem('colorScore', {});
+    }
+
+    static clearStorage() {
+        GameStorage.removeItem('colorScore');
     }
 }
 
@@ -493,24 +585,6 @@ export class JokerScoreBlock extends ScoreBlock {
 
         this.selected = !this.selected;
 
-        //currentGame.updateJokerState(index, selected);
         dispatch(EVENTS.JOKER_SELECTED, {joker: this});
-
-        // Grid.jokerHandler({joker:this, index, event});
-        //
-        // event.preventDefault();
-        // event.stopPropagation();
-        //
-        // // Update selected state
-        // this.selected = !this.selected;
-        //
-        // // Save new block state to game cache
-        // dispatch(EVENTS.UPDATE_GRID_BLOCK, {gridBlock: this});
-        //
-        // // Check if row is completed
-        // Grid.setColumnScoreState({letter: this.letter, shouldEmit: true});
-        //
-        // dispatch(EVENTS.SCORE_COLUMN_UPDATE);
-        // //Grid.coloredBlockHandler({block:this.element, event, currentGame: this.currentGame});
     }
 }

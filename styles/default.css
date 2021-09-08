@@ -104,6 +104,7 @@
     left: 50%;
     transform: translate(-50%, -50%);
 }
+.final-score.taken:before,
 .joker.used:before,
 .score-block.selected:before {
     transform: translate(-50%, -50%) scale(1,1);
@@ -192,7 +193,7 @@ span.column-score.taken {
     position: absolute;
     line-height: var(--block-size);
 }
-.final-score.final-selected span:after {
+.final-score.active span:after {
     content: " ";
     width: var(--circle-size);
     height: var(--circle-size);

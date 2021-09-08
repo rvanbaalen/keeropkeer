@@ -1,4 +1,4 @@
-import {ColumnScoreBlock} from "./Block";
+import {ColorScoreBlock, ColumnScoreBlock} from "./Block";
 import socket from "./socket";
 
 export class Grid {
@@ -16,9 +16,8 @@ export class Grid {
             .filter(block => block.isActive())
             .length === 0
 
-        if (activateBlock) {
-            let block =
-                ColumnScoreBlock.getFirstAvailable({letter});
+        let block = ColumnScoreBlock.getFirstAvailable({letter});
+        if (activateBlock && block !== false) {
             block?.active();
 
             if (block.isHighScore() && shouldEmit) {
@@ -38,14 +37,50 @@ export class Grid {
             });
     }
 
-    static jokerHandler({joker, currentGame, index, event}) {
-
-    }
-
-    static isColumnComplete({letter, parent = document}) {
-        const columnElement = parent.querySelectorAll(`[data-letter="${letter}"]`)[0]?.parentElement;
+    static isColumnComplete({letter}) {
+        const columnElement = document.querySelectorAll(`[data-letter="${letter}"]`)[0]?.parentElement;
         const selectedBlocks = columnElement.querySelectorAll('.score-block.selected').length;
 
         return selectedBlocks === 7;
+    }
+
+    static setColorScoreState({color, shouldEmit = false}) {
+        if (Grid.isColorComplete({color})) {
+            Grid.toggleCompletedColor({color, shouldEmit});
+        } else {
+            Grid.clearColorScore({color, shouldEmit});
+        }
+    }
+    static isColorComplete({color}) {
+        const coloredBlocks = document.querySelectorAll(`[data-color="${color}"][data-type="score-block"]`);
+        const selectedBlocks = document.querySelectorAll(`[data-color="${color}"][data-type="score-block"].selected`);
+
+        return coloredBlocks.length === selectedBlocks.length;
+    }
+    static toggleCompletedColor({color, shouldEmit = false}) {
+        let activateBlock = ColorScoreBlock
+            .getAll({color})
+            .filter(block => block.isActive())
+            .length === 0
+
+        let block = ColorScoreBlock.getFirstAvailable({color});
+        if (activateBlock && block !== false) {
+            block?.active();
+
+            if (block.isHighScore() && shouldEmit) {
+                socket.emit('grid:color-complete', {color});
+            }
+        }
+    }
+    static clearColorScore({color, shouldEmit = false}) {
+        ColorScoreBlock.getAll({color})
+            .forEach(block => {
+                if (block.isActive()) {
+                    block.default();
+                    if (block.isHighScore() && shouldEmit) {
+                        socket.emit('grid:color-clear', {color});
+                    }
+                }
+            });
     }
 }

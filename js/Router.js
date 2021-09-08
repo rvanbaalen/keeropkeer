@@ -26,7 +26,6 @@ export class Router {
     hideCurrent() {
         if (this.currentView) {
             if (!this.silent) this.previousView = this.currentView;
-            dispatch(EVENTS.NAVIGATE_FROM, {page: this.currentView});
             this.currentView.classList.add('hidden');
         }
     }
@@ -37,7 +36,6 @@ export class Router {
         this.hideCurrent();
         this.currentView = $(page);
         this.currentView.classList.remove('hidden');
-        dispatch(EVENTS.NAVIGATE_TO, {page: this.currentView});
         this.silent = false;
     }
 

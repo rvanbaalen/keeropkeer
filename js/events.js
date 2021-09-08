@@ -6,22 +6,15 @@ export const EVENTS = {
     GAME_CREATE_STATE: 'game-create-state',
     SCORE_RELOAD: 'score-reload',
     SCORE_TOTAL_TOGGLE: 'score-total-toggle',
-    MODAL_TOGGLE: 'modal-toggle',
     MODAL_HIDE: 'modal-hide',
     MODAL_SHOW: 'modal-show',
-    GRID_RENDER_COMPLETE: 'grid-render-complete',
     JOKER_SELECTED: 'joker-selected',
     STAR_SELECTED: 'star-selected',
-    RENDER_TOTAL_SCORE: 'render-total-score',
     RENDER_LEVEL: 'render-level',
-    LOADING: 'loading',
-    NAVIGATE_FROM: 'navigate-from',
-    NAVIGATE_TO: 'navigate-to',
     NAVIGATE: 'navigate',
     NAVIGATE_BACK: 'navigate-back',
-    SCORE_COLUMN_CLAIM: 'score-column-claim',
     SCORE_COLUMN_UPDATE: 'score-column-update',
-    BLOCK_SELECTED: 'block-selected',
+    SCORE_COLOR_UPDATE: 'score-color-update',
     UPDATE_GRID_BLOCK: 'update-grid-block'
 };
 

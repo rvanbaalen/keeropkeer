@@ -1,5 +1,4 @@
-import {$, forEachQuery} from "./utilities.js";
-import {createElement, renderButton} from "./rendering.js";
+import {$} from "./utilities.js";
 import {createNewModal, Modals, registerModalEvents} from "./modals.js";
 import {dispatch, EVENTS, listen} from "./events.js";
 import {Game} from "./Game.js";
@@ -11,6 +10,7 @@ import {Layout} from "./Layout";
 import {Router} from "./Router";
 import {Lobby} from "./Lobby";
 import {Grid} from "./Grid";
+import {ColorScoreBlock} from "./Block";
 
 export class Engine {
     currentGame = false;
@@ -28,9 +28,6 @@ export class Engine {
 
         $('connecting-message').innerText = language.messages.connecting;
 
-        listen(EVENTS.LOADING, () => {
-            dispatch(EVENTS.MODAL_SHOW, {modalId: 'genericLoading'});
-        });
         listen(EVENTS.RENDER_LEVEL, () => {
             this.render();
         });
@@ -52,17 +49,21 @@ export class Engine {
             // Clear player list. They'll reappear once they reconnect
             Lobby.setPlayers([]);
         });
+        socket.on('game:confirm-new', ({player}) => {
+            Modals.showNewGameModal({
+                message: `Speler ${player.username} start een nieuw spel. Wil jij ook opnieuw beginnen?`,
+                emit: false
+            });
+        });
 
         $('newGameButton').addEventListener('click', (event) => {
             event.preventDefault();
             event.stopPropagation();
 
-            const modalId = 'newGameModal';
-            Modals.newGame({modalId});
-
-            dispatch(EVENTS.MODAL_SHOW, {modalId: 'newGameModal'});
+            Modals.showNewGameModal({emit: true});
         }, false);
     }
+
 
     parseOrientationOverlay() {
         createNewModal({
@@ -87,74 +88,17 @@ export class Engine {
         Layout.renderJokers({jokers: state.jokers});
     }
 
-    parseScoreColumns(state) {
-        const valueClass = (value) => {
-            if (value === -1) return ' selected';
-            if (value === 5 || value === 3) return ' final-selected';
-            return '';
-        }
-
-        $('scoreColumn1').innerHTML = state.colorScores.high.map(colorScore => {
-            return `<span class="score-block final-score ${colorScore.color}" data-color="${colorScore.color}" data-type="colorScore" data-value="5"><span>5</span></span>`;
+    parseScoreColumns() {
+        $('scoreColumn1').innerHTML = Game.COLORS.map(color => {
+            return new ColorScoreBlock({value: 5, color}).render();
         }).join('');
 
-        $('scoreColumn2').innerHTML = state.colorScores.low.map(colorScore => {
-            return `<span class="score-block final-score ${colorScore.color}" data-color="${colorScore.color}" data-type="colorScore" data-value="3"><span>3</span></span>`;
+        $('scoreColumn2').innerHTML = Game.COLORS.map(color => {
+            return new ColorScoreBlock({value: 3, color}).render();
         }).join('');
 
-
-        // Final score toggles
-        let getValueFromClass = function (element, high = 5, low = -1) {
-            if (!element.classList.contains('final-selected') && !element.classList.contains('selected')) {
-                // Not selected yet, value = 5
-                return high;
-            }
-            if (element.classList.contains('final-selected') && !element.classList.contains('selected')) {
-                // Already selected, toggle disabled state, value = -1
-                return low
-            }
-
-            return 0;
-        };
-        let getColorFromElement = function (element) {
-            let color = '';
-            Game.COLORS.forEach(mappedColor => {
-                if (element.classList.contains(mappedColor)) {
-                    color = mappedColor;
-                }
-            });
-
-            return color;
-        };
-        let highScores = document.querySelectorAll('#scoreColumn1 .final-score');
-        Array.prototype.forEach.call(highScores, (highScore) => {
-            highScore.addEventListener('click', (event) => {
-                event.preventDefault();
-                event.stopPropagation();
-
-                this.currentGame.updateColorScoreState(
-                    'high',
-                    getColorFromElement(highScore),
-                    getValueFromClass(highScore, 5, -1)
-                );
-
-                dispatch(EVENTS.SCORE_RELOAD);
-            }, false);
-        });
-        let lowScores = document.querySelectorAll('#scoreColumn2 .final-score');
-        Array.prototype.forEach.call(lowScores, (lowScore) => {
-            lowScore.addEventListener('click', (event) => {
-                event.preventDefault();
-                event.stopPropagation();
-
-                this.currentGame.updateColorScoreState(
-                    'low',
-                    getColorFromElement(lowScore),
-                    getValueFromClass(lowScore, 3, -1)
-                );
-
-                dispatch(EVENTS.SCORE_RELOAD);
-            }, false);
+        Game.COLORS.map(color => {
+            Grid.setColorScoreState({color});
         });
     }
 
@@ -163,8 +107,6 @@ export class Engine {
         this.parseColumnGrid(state);
         this.parseJokerColumn(this.currentGame.state);
         this.parseScoreColumns(this.currentGame.state);
-
-        dispatch(EVENTS.GRID_RENDER_COMPLETE);
     }
 
     parseTotalScores() {
@@ -194,32 +136,10 @@ export class Engine {
         }, false);
     }
 
-    renderNewGameButton(callback) {
-        const id = 'newGameButton';
-        if ($(id)) {
-            return;
-        }
-
-        const button = renderButton({
-            callback, id,
-            label: language.label.newGame,
-            className: 'new-game',
-        });
-
-        // New game button
-        $('gameView').append(button);
-
-        return button;
-    }
-
     render() {
         this.parseGrid();
         this.parseTotalScores();
 
         dispatch(EVENTS.SCORE_RELOAD);
-    }
-
-    parseColumn(column) {
-
     }
 }

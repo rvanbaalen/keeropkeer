@@ -107,6 +107,8 @@ export class Game {
     resetState() {
         this.Level.reset();
         this.state = false;
+        GameStorage.removeItem('columnScore');
+        GameStorage.removeItem('colorScore');
     }
 
     createState() {
@@ -138,22 +140,6 @@ export class Game {
             GameStorage.removeItem('state');
         } else {
             GameStorage.setItem('state', value);
-        }
-    }
-
-    updateState(column, index, key, value, type = 'grid') {
-        let currentState = this.state;
-        let found = false;
-        currentState.grid.forEach((stateColumn, stateIndex) => {
-            if (stateColumn.column === column) {
-                currentState.grid[stateIndex][type][index][key] = value;
-                found = true;
-            }
-        });
-
-        if (found) {
-            this.state = currentState;
-            dispatch(EVENTS.RENDER_LEVEL);
         }
     }
 
@@ -191,22 +177,6 @@ export class Game {
 
         if (found) {
             this.state = currentState;
-        }
-    }
-
-    updateColorScoreState(group, color, value) {
-        let found = false;
-        let currentState = this.state;
-        currentState.colorScores[group].forEach((colorScore) => {
-            if (colorScore.color === color) {
-                colorScore.value = value;
-                found = true;
-            }
-        });
-
-        if (found) {
-            this.state = currentState;
-            dispatch(EVENTS.RENDER_LEVEL);
         }
     }
 }

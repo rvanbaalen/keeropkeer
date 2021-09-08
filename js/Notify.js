@@ -1,5 +1,4 @@
-import {renderTemplate} from "./rendering";
-import {$, forEachQuery, randomString} from "./utilities";
+import {$, forEachQuery, R, randomString} from "./utilities";
 
 export class Notify {
     static TRANSITION_DELAY = 200;
@@ -87,6 +86,6 @@ export class Notify {
             </div>
         `;
 
-        return renderTemplate(template);
+        return R(template);
     }
 }
