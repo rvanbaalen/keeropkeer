@@ -9,8 +9,7 @@ import {Session} from "./Session";
 import {Layout} from "./Layout";
 import {Router} from "./Router";
 import {Lobby} from "./Lobby";
-import {Grid} from "./Grid";
-import {ColorScoreBlock} from "./Block";
+import {ColorScoreBlock, Grid} from "./Block";
 
 export class Engine {
     currentGame = false;

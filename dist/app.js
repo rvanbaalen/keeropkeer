@@ -112,16 +112,14 @@ function listen(eventName, callback, once = false) {
     app.addEventListener(eventName, callback, false);
 }
 
-const SOCKET_SERVER = 'http://0.0.0.0:3000/';
+const SOCKET_SERVER = 'https://dry-peak-80209.herokuapp.com/' ;
 
 const io = window.io;
 const socket = io(SOCKET_SERVER, { autoConnect: false });
 
 socket.onAny((event, ...args) => {
-    console.log(event, args);
+    //console.log(event, args);
 });
-
-console.log('Setup socket server ', SOCKET_SERVER);
 
 function registerModalEvents() {
     listen(EVENTS.MODAL_HIDE, event => {
@@ -867,7 +865,6 @@ class ColorScoreBlock extends ColumnScoreBlock {
      * @returns {ColumnScoreBlock}
      */
     static getFirstAvailable({color}) {
-        console.log('getting ' + `[data-type="${ScoreBlock.TYPE_COLOR_SCORE}"][data-color="${color}"]:not(.${ColorScoreBlock.STATE.ACTIVE}):not(.${ColorScoreBlock.STATE.TAKEN})`);
         const element = document.querySelector(`[data-type="${ScoreBlock.TYPE_COLOR_SCORE}"][data-color="${color}"]:not(.${ColorScoreBlock.STATE.ACTIVE}):not(.${ColorScoreBlock.STATE.TAKEN})`);
         if (element) {
             return ColorScoreBlock.getInstance(element);
@@ -1001,7 +998,6 @@ class Grid {
         if (activateBlock && block !== false) {
             block?.active();
 
-            console.log(block.value, 5, block.value === 5);
             if (block.isHighScore() && shouldEmit) {
                 socket.emit('grid:color-complete', {color});
             }
@@ -3619,7 +3615,6 @@ class Score {
     renderTotalScore() {
         const el = $('totalScore');
         if (!el.classList.contains('hide')) {
-            console.log('set total', this.total);
             el.innerText = this.total;
         }
     }

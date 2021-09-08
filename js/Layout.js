@@ -1,6 +1,5 @@
 import {$, R} from "./utilities";
-import {Grid} from "./Grid";
-import {GridBlock, ColumnScoreBlock, JokerScoreBlock} from "./Block";
+import {GridBlock, ColumnScoreBlock, JokerScoreBlock, Grid} from "./Block";
 
 export class Layout {
     static render() {
