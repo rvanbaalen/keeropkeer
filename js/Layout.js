@@ -67,6 +67,7 @@ export class Layout {
                 <ul id="players" class="blockList playerList"></ul>
                 <h2 class="rainbow">Lobby</h2>
                 <a href="#" id="lobbyCode">Cool</a>
+                <a href="/clear.html" id="reset">Reset</a>
             </div>
             <div id="levelContainer">
                 <h2 class="rainbow">Selecteer een level</h2>

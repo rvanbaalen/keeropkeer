@@ -112,7 +112,7 @@ function listen(eventName, callback, once = false) {
     app.addEventListener(eventName, callback, false);
 }
 
-const SOCKET_SERVER = 'https://dry-peak-80209.herokuapp.com/' ;
+const SOCKET_SERVER = 'http://0.0.0.0:3000/';
 
 const io = window.io;
 const socket = io(SOCKET_SERVER, { autoConnect: false });
@@ -1082,6 +1082,7 @@ class Layout {
                 <ul id="players" class="blockList playerList"></ul>
                 <h2 class="rainbow">Lobby</h2>
                 <a href="#" id="lobbyCode">Cool</a>
+                <a href="/clear.html" id="reset">Reset</a>
             </div>
             <div id="levelContainer">
                 <h2 class="rainbow">Selecteer een level</h2>

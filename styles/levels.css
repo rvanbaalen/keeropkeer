@@ -8,10 +8,17 @@
     flex: 1 0 auto;
     order: 1;
     width: 20%;
+    min-height: 75%;
     align-items: center;
     display: flex;
     flex-direction: column;
     align-self: flex-start;
+}
+#reset {
+    margin-top: auto;
+    color: #333;
+    text-decoration: none;
+    text-transform: uppercase;
 }
 #playerContainer h2 {
     text-align: center;
