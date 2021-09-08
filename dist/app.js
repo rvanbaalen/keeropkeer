@@ -112,7 +112,7 @@ function listen(eventName, callback, once = false) {
     app.addEventListener(eventName, callback, false);
 }
 
-const SOCKET_SERVER = 'http://0.0.0.0:3000/';
+const SOCKET_SERVER = 'https://dry-peak-80209.herokuapp.com/' ;
 
 const io = window.io;
 const socket = io(SOCKET_SERVER, { autoConnect: false });
