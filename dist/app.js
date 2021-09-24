@@ -506,9 +506,12 @@ class GridBlock extends Block {
 
         this.element = tpl;
 
-        delegate('#app', `[data-type="score-block"][data-letter="${this.letter}"][data-row="${this.row}"]`, 'click', event => {
+        const delegation = delegate('#app', `[data-type="score-block"][data-letter="${this.letter}"][data-row="${this.row}"]`, 'click', event => {
             this.refresh();
             this.onClick({event});
+        });
+        listen('delegation.destroy', () => {
+            delegation.destroy();
         });
 
         return tpl;
@@ -692,8 +695,12 @@ class ColumnScoreBlock extends ScoreBlock {
         `;
         this.element = tpl;
 
-        delegate('#app', `[data-type="${this.type}"][data-letter="${this.letter}"][data-row="${this.row}"]`, 'click', event => {
+        const delegation = delegate('#app', `[data-type="${this.type}"][data-letter="${this.letter}"][data-row="${this.row}"]`, 'click', event => {
+            console.log('delegate a click', `${this.type}, ${this.letter}, ${this.row}`);
             this.onClick({event});
+        });
+        listen('delegation.destroy', () => {
+            delegation.destroy();
         });
 
         return tpl;
@@ -745,6 +752,7 @@ class ColumnScoreBlock extends ScoreBlock {
         event.preventDefault();
         event.stopPropagation();
 
+        console.log('wtf i was clicked');
         this.refresh();
         this.toggleState();
     }
@@ -808,8 +816,11 @@ class ColorScoreBlock extends ColumnScoreBlock {
         const tpl = `<span class="score-block final-score${this.blockState !== ColumnScoreBlock.STATE.DEFAULT ? ' ' + this.blockState : ''}" data-color="${this.color}" data-type="${this.type}" data-value="${this.value}"><span>${this.value}</span></span>`;
         this.element = tpl;
 
-        delegate('#app', `[data-type="${this.type}"][data-color="${this.color}"][data-value="${this.value}"]`, 'click', event => {
+        const delegation = delegate('#app', `[data-type="${this.type}"][data-color="${this.color}"][data-value="${this.value}"]`, 'click', event => {
             this.onClick({event});
+        });
+        listen('delegation.destroy', () => {
+            delegation.destroy();
         });
 
         return tpl;
@@ -906,9 +917,12 @@ class JokerScoreBlock extends ScoreBlock {
         const tpl = `<span class="joker${this.selected ? ' used' : ''}" data-type="joker" data-row="${this.row}">!</span>`;
         this.element = tpl;
 
-        delegate('#app', `[data-type="joker"][data-row="${this.row}"]`, 'click', event => {
+        const delegation = delegate('#app', `[data-type="joker"][data-row="${this.row}"]`, 'click', event => {
             this.refresh();
             this.onClick({event});
+        });
+        listen('delegation.destroy', () => {
+            delegation.destroy();
         });
 
         return tpl;
@@ -1138,7 +1152,7 @@ class Layout {
     static renderGridColumn({column}) {
         const letter = column.column;
         return R(`
-            <div class="column${column.column === 'H' ? ' highlight' : ''}">
+            <div class="column${letter === 'H' ? ' highlight' : ''}">
                 <span class="rounded-block header" data-letter="${letter}">${letter}</span>
                 ${ Layout.renderGridColumnBlocks({blocks: column.grid, column}) }
                 ${ Layout.renderColumnScores({column}) }
@@ -4063,6 +4077,7 @@ class Engine {
 
             // Clear player list. They'll reappear once they reconnect
             Lobby.setPlayers([]);
+            dispatch('delegation.destroy');
         });
         socket.on('game:confirm-new', ({player}) => {
             Modals.showNewGameModal({

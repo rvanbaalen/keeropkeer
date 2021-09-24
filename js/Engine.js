@@ -47,6 +47,7 @@ export class Engine {
 
             // Clear player list. They'll reappear once they reconnect
             Lobby.setPlayers([]);
+            dispatch('delegation.destroy');
         });
         socket.on('game:confirm-new', ({player}) => {
             Modals.showNewGameModal({
