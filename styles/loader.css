@@ -13,6 +13,7 @@
     font-weight: 700;
     background: linear-gradient(to right, var(--orange), #ffef9e, #32e883, #4f52ff, #ff1e53, var(--orange));
     background-size: 200% auto;
+    -webkit-background-clip: text;
     background-clip: text;
     text-fill-color: transparent;
     -webkit-text-fill-color: transparent;

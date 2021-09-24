@@ -231,6 +231,7 @@ span.column-score.taken {
 .rainbow {
     text-transform: uppercase;
     background: linear-gradient(to right, var(--orange), #ffef9e, #32e883, #4f52ff, #ff1e53);
+    -webkit-background-clip: text;
     background-clip: text;
     color: transparent !important;
     display: inline-block;
