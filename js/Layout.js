@@ -123,7 +123,7 @@ export class Layout {
     static renderGridColumn({column}) {
         const letter = column.column;
         return R(`
-            <div class="column${column.column === 'H' ? ' highlight' : ''}">
+            <div class="column${letter === 'H' ? ' highlight' : ''}">
                 <span class="rounded-block header" data-letter="${letter}">${letter}</span>
                 ${ Layout.renderGridColumnBlocks({blocks: column.grid, column}) }
                 ${ Layout.renderColumnScores({column}) }
